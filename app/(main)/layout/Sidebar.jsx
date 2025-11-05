@@ -8,7 +8,13 @@ import React, {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaCalendar, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import {
+  FaCalendar,
+  FaChevronDown,
+  FaChevronUp,
+  FaSearch,
+  FaTimes,
+} from "react-icons/fa";
 import {
   fetchExams,
   fetchSubjectsByExam,
@@ -40,10 +46,90 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   const [expandedSubjects, setExpandedSubjects] = useState({});
   const [expandedUnits, setExpandedUnits] = useState({});
   const [expandedChapters, setExpandedChapters] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   const toggle = (setFn, key) =>
     setFn((prev) => ({ ...prev, [key]: !prev[key] }));
   const goTo = (path) => router.push(path);
+
+  // Filter function to check if item matches search query
+  const matchesSearch = (text) => {
+    if (!searchQuery.trim()) return true;
+    return text?.toLowerCase().includes(searchQuery.toLowerCase());
+  };
+
+  // Filter subjects data based on search query
+  const filteredSubjectsData = useMemo(() => {
+    if (!searchQuery.trim()) return subjectsWithData;
+
+    const filtered = {};
+    Object.entries(subjectsWithData).forEach(([subKey, sub]) => {
+      const subjectMatches = matchesSearch(sub.name);
+      const filteredUnits = {};
+
+      Object.entries(sub.units || {}).forEach(([unitKey, unit]) => {
+        const unitMatches = matchesSearch(unit.name);
+        const filteredChapters = {};
+
+        Object.entries(unit.chapters || {}).forEach(([chapterKey, chapter]) => {
+          const chapterMatches = matchesSearch(chapter.name);
+          const filteredTopics =
+            chapter.topics?.filter((topic) => matchesSearch(topic.name)) || [];
+
+          if (
+            chapterMatches ||
+            filteredTopics.length > 0 ||
+            subjectMatches ||
+            unitMatches
+          ) {
+            filteredChapters[chapterKey] = {
+              ...chapter,
+              topics: filteredTopics,
+            };
+          }
+        });
+
+        if (
+          unitMatches ||
+          Object.keys(filteredChapters).length > 0 ||
+          subjectMatches
+        ) {
+          filteredUnits[unitKey] = {
+            ...unit,
+            chapters: filteredChapters,
+          };
+        }
+      });
+
+      if (subjectMatches || Object.keys(filteredUnits).length > 0) {
+        filtered[subKey] = {
+          ...sub,
+          units: filteredUnits,
+        };
+      }
+    });
+
+    return filtered;
+  }, [subjectsWithData, searchQuery]);
+
+  // Auto-expand items when searching
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const newExpanded = {};
+      Object.keys(filteredSubjectsData).forEach((subKey) => {
+        newExpanded[subKey] = true;
+        const subject = filteredSubjectsData[subKey];
+        Object.keys(subject.units || {}).forEach((unitKey) => {
+          setExpandedUnits((prev) => ({ ...prev, [unitKey]: true }));
+          const unit = subject.units[unitKey];
+          Object.keys(unit.chapters || {}).forEach((chapterKey) => {
+            setExpandedChapters((prev) => ({ ...prev, [chapterKey]: true }));
+          });
+        });
+      });
+      setExpandedSubjects(newExpanded);
+    }
+  }, [searchQuery, filteredSubjectsData]);
 
   // Update expansion states based on current path (without reloading data)
   const updateExpansionStates = useCallback(
@@ -300,7 +386,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   if (isLoading) {
     return (
       <aside
-        className={`fixed lg:static top-0 left-0 bottom-0 w-72 bg-white border-r border-gray-200 z-[50] lg:z-auto transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:static top-0 left-0 bottom-0 w-72 bg-white border-r border-gray-200 z-50 lg:z-auto transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } lg:flex flex-col overflow-y-auto shadow-sm`}
       >
@@ -317,7 +403,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   return (
     <aside
       ref={sidebarRef}
-      className={`fixed lg:static top-0 left-0 bottom-0  w-72 bg-white border-r border-gray-200 z-[55] lg:z-auto transform transition-transform duration-300 ease-in-out ${
+      className={`fixed lg:static top-0 left-0 bottom-0  w-72 bg-white border-r border-gray-200 z-55 lg:z-auto transform transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       } lg:flex flex-col overflow-y-auto shadow-sm`}
     >
@@ -352,19 +438,19 @@ const Sidebar = ({ isOpen = false, onClose }) => {
         </div>
 
         {/* Exam Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative px-4 pb-4" ref={dropdownRef}>
           <button
             onClick={() => setExamDropdownOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all duration-200 shadow-sm"
           >
             <div className="flex items-center gap-3 truncate">
-              <FaCalendar className="text-gray-600 text-sm" />
-              <span className="text-[15px] font-medium text-gray-900 truncate">
+              <FaCalendar className="text-blue-600 text-sm" />
+              <span className="text-[15px] font-semibold text-gray-900 truncate">
                 {selectedExam?.name || "Select Exam"}
               </span>
             </div>
             <FaChevronDown
-              className={`text-gray-500 text-xs transition-transform duration-200 ${
+              className={`text-blue-600 text-xs transition-transform duration-200 ${
                 examDropdownOpen ? "rotate-180" : ""
               }`}
             />
@@ -397,10 +483,35 @@ const Sidebar = ({ isOpen = false, onClose }) => {
           </AnimatePresence>
         </div>
 
+        {/* Search Input */}
+        {selectedExam && Object.keys(subjectsWithData).length > 0 && (
+          <div className="px-4 pb-3">
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Search subjects, units, chapters..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white placeholder-gray-400 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <FaTimes className="text-sm" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Subjects Section */}
-        {selectedExam && Object.keys(subjectsWithData).length > 0 ? (
+        {selectedExam && Object.keys(filteredSubjectsData).length > 0 ? (
           <div className="space-y-3">
-            {Object.entries(subjectsWithData).map(([subKey, sub]) => {
+            {Object.entries(filteredSubjectsData).map(([subKey, sub]) => {
               const isExpanded = expandedSubjects[subKey] ?? false;
               const isActive = subjectKey && subjectKey === subKey;
 
@@ -408,10 +519,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                 <div key={subKey} className="rounded-lg overflow-hidden">
                   {/* Subject */}
                   <div
-                    className={`flex items-center justify-between rounded-lg ${
+                    className={`flex items-center justify-between rounded-lg transition-all duration-200 ${
                       isActive
-                        ? "bg-blue-50 border-l-4 border-blue-600"
-                        : "hover:bg-gray-50 border-l-4 border-transparent"
+                        ? "bg-blue-600 border-l-4 border-blue-700 shadow-sm"
+                        : "hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-300"
                     }`}
                   >
                     <button
@@ -421,21 +532,33 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                         setExpandedSubjects((p) => ({ ...p, [subKey]: true }));
                       }}
                       title={sub.name}
-                      className={`flex-1 text-left px-4 py-2.5 text-[15px] font-semibold truncate ${
-                        isActive ? "text-blue-700" : "text-gray-800"
+                      className={`flex-1 text-left px-4 py-2.5 text-[15px] font-semibold truncate transition-colors ${
+                        isActive
+                          ? "text-white"
+                          : "text-gray-800 hover:text-blue-600"
                       }`}
                     >
                       {sub.name}
                     </button>
                     <button
                       onClick={() => toggle(setExpandedSubjects, subKey)}
-                      className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                      className={`p-1.5 rounded transition-colors ${
+                        isActive ? "hover:bg-blue-700" : "hover:bg-gray-100"
+                      }`}
                       aria-label="Toggle subject"
                     >
                       {isExpanded ? (
-                        <FaChevronUp className="text-xs text-gray-500" />
+                        <FaChevronUp
+                          className={`text-xs ${
+                            isActive ? "text-white" : "text-gray-500"
+                          }`}
+                        />
                       ) : (
-                        <FaChevronDown className="text-xs text-gray-500" />
+                        <FaChevronDown
+                          className={`text-xs ${
+                            isActive ? "text-white" : "text-gray-500"
+                          }`}
+                        />
                       )}
                     </button>
                   </div>
@@ -450,25 +573,38 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="ml-6 mt-1.5 space-y-0.5 border-l border-gray-200 pl-3">
+                        <div className="ml-6 mt-1.5 space-y-1 border-l-2 border-gray-200 pl-3">
                           {Object.entries(sub.units || {}).map(
-                            ([unitKey, unit]) => {
+                            ([unitKeyLoop, unit]) => {
                               const isUnitExpanded =
-                                expandedUnits[unitKey] ?? false;
+                                expandedUnits[unitKeyLoop] ?? false;
+                              const isUnitActive =
+                                subjectKey === subKey &&
+                                unitKey === unitKeyLoop;
                               return (
-                                <div key={unitKey}>
-                                  <div className="flex items-center justify-between">
+                                <div key={unitKeyLoop}>
+                                  <div
+                                    className={`flex items-center justify-between rounded transition-all duration-200 ${
+                                      isUnitActive
+                                        ? "bg-blue-600 border-l-2 border-blue-700 shadow-sm"
+                                        : "hover:bg-gray-50"
+                                    }`}
+                                  >
                                     <button
                                       onClick={() => {
                                         const examSlug = createSlug(
                                           selectedExam.name
                                         );
                                         handleNavigation(
-                                          `/${examSlug}/${subKey}/${unitKey}`
+                                          `/${examSlug}/${subKey}/${unitKeyLoop}`
                                         );
                                       }}
                                       title={unit.name}
-                                      className="flex-1 text-left px-3 py-2 text-[14px] font-medium text-gray-700 hover:bg-gray-50 rounded transition-colors truncate"
+                                      className={`flex-1 text-left px-3 py-2 text-[14px] font-medium rounded transition-colors truncate ${
+                                        isUnitActive
+                                          ? "text-white font-semibold"
+                                          : "text-gray-700 hover:text-blue-600"
+                                      }`}
                                     >
                                       {unit.name}
                                     </button>
@@ -476,15 +612,31 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                       0 && (
                                       <button
                                         onClick={() =>
-                                          toggle(setExpandedUnits, unitKey)
+                                          toggle(setExpandedUnits, unitKeyLoop)
                                         }
-                                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                        className={`p-1 rounded transition-colors ${
+                                          isUnitActive
+                                            ? "hover:bg-blue-700"
+                                            : "hover:bg-gray-100"
+                                        }`}
                                         aria-label="Toggle unit"
                                       >
                                         {isUnitExpanded ? (
-                                          <FaChevronUp className="text-[10px] text-gray-400" />
+                                          <FaChevronUp
+                                            className={`text-[10px] ${
+                                              isUnitActive
+                                                ? "text-white"
+                                                : "text-gray-400"
+                                            }`}
+                                          />
                                         ) : (
-                                          <FaChevronDown className="text-[10px] text-gray-400" />
+                                          <FaChevronDown
+                                            className={`text-[10px] ${
+                                              isUnitActive
+                                                ? "text-white"
+                                                : "text-gray-400"
+                                            }`}
+                                          />
                                         )}
                                       </button>
                                     )}
@@ -500,16 +652,27 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                         transition={{ duration: 0.2 }}
                                         className="overflow-hidden"
                                       >
-                                        <div className="ml-4 mt-1 space-y-0.5 border-l border-gray-200 pl-3">
+                                        <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-3">
                                           {Object.entries(
                                             unit.chapters || {}
-                                          ).map(([chapterKey, chapter]) => {
+                                          ).map(([chapterKeyLoop, chapter]) => {
                                             const isChapExpanded =
-                                              expandedChapters[chapterKey] ??
-                                              false;
+                                              expandedChapters[
+                                                chapterKeyLoop
+                                              ] ?? false;
+                                            const isChapterActive =
+                                              subjectKey === subKey &&
+                                              unitKey === unitKeyLoop &&
+                                              chapterKey === chapterKeyLoop;
                                             return (
-                                              <div key={chapterKey}>
-                                                <div className="flex items-center justify-between">
+                                              <div key={chapterKeyLoop}>
+                                                <div
+                                                  className={`flex items-center justify-between rounded transition-all duration-200 ${
+                                                    isChapterActive
+                                                      ? "bg-blue-600 border-l-2 border-blue-700 shadow-sm"
+                                                      : "hover:bg-gray-50"
+                                                  }`}
+                                                >
                                                   <button
                                                     onClick={() => {
                                                       const examSlug =
@@ -517,11 +680,15 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                                           selectedExam.name
                                                         );
                                                       handleNavigation(
-                                                        `/${examSlug}/${subKey}/${unitKey}/${chapterKey}`
+                                                        `/${examSlug}/${subKey}/${unitKeyLoop}/${chapterKeyLoop}`
                                                       );
                                                     }}
                                                     title={chapter.name}
-                                                    className="flex-1 text-left px-3 py-1.5 text-[13px] text-gray-600 hover:bg-gray-50 rounded transition-colors truncate"
+                                                    className={`flex-1 text-left px-3 py-1.5 text-[13px] rounded transition-colors truncate ${
+                                                      isChapterActive
+                                                        ? "text-white font-semibold"
+                                                        : "text-gray-600 hover:text-blue-600"
+                                                    }`}
                                                   >
                                                     {chapter.name}
                                                   </button>
@@ -531,16 +698,32 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                                       onClick={() =>
                                                         toggle(
                                                           setExpandedChapters,
-                                                          chapterKey
+                                                          chapterKeyLoop
                                                         )
                                                       }
-                                                      className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                                      className={`p-1 rounded transition-colors ${
+                                                        isChapterActive
+                                                          ? "hover:bg-blue-700"
+                                                          : "hover:bg-gray-100"
+                                                      }`}
                                                       aria-label="Toggle chapter"
                                                     >
                                                       {isChapExpanded ? (
-                                                        <FaChevronUp className="text-[10px] text-gray-400" />
+                                                        <FaChevronUp
+                                                          className={`text-[10px] ${
+                                                            isChapterActive
+                                                              ? "text-white"
+                                                              : "text-gray-400"
+                                                          }`}
+                                                        />
                                                       ) : (
-                                                        <FaChevronDown className="text-[10px] text-gray-400" />
+                                                        <FaChevronDown
+                                                          className={`text-[10px] ${
+                                                            isChapterActive
+                                                              ? "text-white"
+                                                              : "text-gray-400"
+                                                          }`}
+                                                        />
                                                       )}
                                                     </button>
                                                   )}
@@ -567,26 +750,63 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                                       }}
                                                       className="overflow-hidden"
                                                     >
-                                                      <div className="ml-4 mt-1 space-y-0.5">
+                                                      <div className="ml-4 mt-1 space-y-1">
                                                         {chapter.topics.map(
-                                                          (topic) => (
-                                                            <button
-                                                              key={topic.slug}
-                                                              onClick={() =>
-                                                                handleNavigation(
-                                                                  `/${createSlug(
-                                                                    selectedExam.name
-                                                                  )}/${subKey}/${unitKey}/${chapterKey}/${encodeURIComponent(
-                                                                    topic.slug
-                                                                  )}`
-                                                                )
-                                                              }
-                                                              title={topic.name}
-                                                              className="w-full text-left px-3 py-1.5 text-[12px] text-gray-600 hover:bg-gray-50 rounded transition-colors truncate"
-                                                            >
-                                                              {topic.name}
-                                                            </button>
-                                                          )
+                                                          (topic) => {
+                                                            const decodedTopicSlug =
+                                                              decodeURIComponent(
+                                                                topic.slug
+                                                              );
+                                                            const topicSlugLower =
+                                                              topic.slug?.toLowerCase();
+                                                            const decodedSlugLower =
+                                                              decodedTopicSlug?.toLowerCase();
+                                                            const topicNameSlug =
+                                                              createSlug(
+                                                                topic.name
+                                                              ).toLowerCase();
+                                                            const currentTopicKeyLower =
+                                                              topicKey?.toLowerCase();
+
+                                                            const isTopicActive =
+                                                              topicKey &&
+                                                              (currentTopicKeyLower ===
+                                                                topicSlugLower ||
+                                                                currentTopicKeyLower ===
+                                                                  decodedSlugLower ||
+                                                                currentTopicKeyLower ===
+                                                                  topicNameSlug) &&
+                                                              subjectKey ===
+                                                                subKey &&
+                                                              unitKey ===
+                                                                unitKeyLoop &&
+                                                              chapterKey ===
+                                                                chapterKeyLoop;
+                                                            return (
+                                                              <button
+                                                                key={topic.slug}
+                                                                onClick={() =>
+                                                                  handleNavigation(
+                                                                    `/${createSlug(
+                                                                      selectedExam.name
+                                                                    )}/${subKey}/${unitKeyLoop}/${chapterKeyLoop}/${encodeURIComponent(
+                                                                      topic.slug
+                                                                    )}`
+                                                                  )
+                                                                }
+                                                                title={
+                                                                  topic.name
+                                                                }
+                                                                className={`w-full text-left px-3 py-1.5 text-[12px] rounded transition-all duration-200 truncate ${
+                                                                  isTopicActive
+                                                                    ? "bg-blue-600 text-white font-semibold border-l-2 border-blue-700 shadow-sm"
+                                                                    : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                                                                }`}
+                                                              >
+                                                                {topic.name}
+                                                              </button>
+                                                            );
+                                                          }
                                                         )}
                                                       </div>
                                                     </motion.div>
@@ -611,8 +831,14 @@ const Sidebar = ({ isOpen = false, onClose }) => {
               );
             })}
           </div>
+        ) : selectedExam &&
+          Object.keys(subjectsWithData).length > 0 &&
+          searchQuery.trim() ? (
+          <div className="text-sm text-gray-500 text-center py-6 px-4">
+            No results found for "{searchQuery}"
+          </div>
         ) : (
-          <div className="text-sm text-gray-500 text-center py-6">
+          <div className="text-sm text-gray-500 text-center py-6 px-4">
             {selectedExam ? "No subjects available" : "Select an exam"}
           </div>
         )}
