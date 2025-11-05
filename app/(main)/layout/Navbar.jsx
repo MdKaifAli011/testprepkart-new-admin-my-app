@@ -11,12 +11,36 @@ import {
   FaSearch,
   FaUser,
   FaTh,
+  FaBars,
   FaChevronDown,
 } from "react-icons/fa";
 import Image from "next/image";
 
-const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+const Navbar = ({ onMenuToggle, isMenuOpen }) => {
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+
+  // Handle default props
+  const handleMenuToggle = onMenuToggle || (() => {});
+
+  // Prevent body scroll when nav menu is open on mobile
+  React.useEffect(() => {
+    if (isNavMenuOpen) {
+      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        document.body.style.overflow = "hidden";
+      }
+    } else {
+      // Only restore scroll if sidebar is also closed
+      if (!isMenuOpen) {
+        document.body.style.overflow = "";
+      }
+    }
+
+    return () => {
+      if (!isMenuOpen) {
+        document.body.style.overflow = "";
+      }
+    };
+  }, [isNavMenuOpen, isMenuOpen]);
 
   const navLinks = [
     "Examinations",
@@ -27,7 +51,7 @@ const Navbar = () => {
   ];
 
   return (
-    <>
+    <nav className="w-full">
       {/* Top Bar - Dark Gray */}
       <div className="bg-gray-800 text-white text-xs py-2 hidden md:block">
         <div className="container mx-auto px-4">
@@ -77,7 +101,7 @@ const Navbar = () => {
       </div>
 
       {/* Main Navigation Bar - White */}
-      <div className="bg-white shadow-md sticky top-0 z-50">
+      <div className="bg-white shadow-md sticky top-0 z-[60] w-full">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between py-2 sm:py-3">
             {/* Left: Logo */}
@@ -146,50 +170,85 @@ const Navbar = () => {
                 <span className="sm:hidden">Enroll</span>
               </Link>
 
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="lg:hidden p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                aria-label="Toggle menu"
-              >
-                <FaTh className="text-base sm:text-lg" />
-              </button>
+              {/* Mobile Menu Buttons */}
+              <div className="lg:hidden flex items-center gap-1">
+                {/* Sidebar Menu Button - Controls Exam/Subject/Unit Navigation */}
+                <button
+                  onClick={handleMenuToggle}
+                  className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 transition-colors relative"
+                  aria-label="Toggle navigation menu"
+                  title="Navigation Menu"
+                >
+                  <FaBars className="text-base sm:text-lg" />
+                </button>
+
+                {/* Nav Menu Button - Controls Category/Examinations/Courses */}
+                <button
+                  onClick={() => setIsNavMenuOpen(!isNavMenuOpen)}
+                  className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 transition-colors relative"
+                  aria-label="Toggle main menu"
+                  title="Main Menu"
+                >
+                  <FaTh className="text-base sm:text-lg" />
+                  {isNavMenuOpen && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full"></span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="lg:hidden border-t border-gray-200 py-4 animate-fade-in">
-              <div className="flex flex-col gap-2">
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors">
-                  <FaTh className="text-sm" />
-                  <span>Category</span>
-                </button>
-                {navLinks.map((link) => (
+          {/* Mobile Navigation Menu - Category, Examinations, Courses, etc. */}
+          {isNavMenuOpen && (
+            <>
+              {/* Mobile Overlay for Nav Menu */}
+              <div
+                className="fixed inset-0 z-[45] lg:hidden"
+                onClick={() => setIsNavMenuOpen(false)}
+              />
+
+              {/* Mobile Menu Dropdown */}
+              <div
+                data-nav-menu
+                data-nav-menu-open={isNavMenuOpen ? "true" : "false"}
+                className="lg:hidden border-t border-gray-200 bg-white absolute top-full left-0 right-0 z-[55] shadow-lg max-h-[calc(100vh-200px)] overflow-y-auto"
+              >
+                <div className="p-4 space-y-2">
+                  {/* Category Button */}
+                  <button className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors">
+                    <FaTh className="text-sm" />
+                    <span>Category</span>
+                  </button>
+
+                  {/* Navigation Links */}
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link}
+                      href="#"
+                      className="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors rounded-lg"
+                      onClick={() => setIsNavMenuOpen(false)}
+                    >
+                      <span>{link}</span>
+                      <FaChevronDown className="text-xs text-gray-400" />
+                    </Link>
+                  ))}
+
+                  {/* Sign In Link */}
                   <Link
-                    key={link}
                     href="#"
-                    className="flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors rounded-lg"
-                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors rounded-lg"
+                    onClick={() => setIsNavMenuOpen(false)}
                   >
-                    <span>{link}</span>
-                    <FaChevronDown className="text-xs text-gray-400" />
+                    <FaUser className="text-sm" />
+                    <span>Sign In</span>
                   </Link>
-                ))}
-                <Link
-                  href="#"
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors rounded-lg"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <FaUser className="text-sm" />
-                  <span>Sign In</span>
-                </Link>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
-    </>
+    </nav>
   );
 };
 

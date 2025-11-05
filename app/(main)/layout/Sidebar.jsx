@@ -20,10 +20,11 @@ import {
 } from "../lib/api";
 import { logger } from "@/utils/logger";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = false, onClose }) => {
   const router = useRouter();
   const pathname = usePathname();
   const dropdownRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   const [examDropdownOpen, setExamDropdownOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
@@ -261,6 +262,18 @@ const Sidebar = () => {
       setLoadedExamId(null);
       await loadExamData(exam);
     }
+    // Close sidebar on mobile after navigation
+    if (onClose && typeof window !== "undefined" && window.innerWidth < 1024) {
+      onClose();
+    }
+  };
+
+  // Close sidebar on navigation (mobile)
+  const handleNavigation = (path) => {
+    goTo(path);
+    if (onClose && typeof window !== "undefined" && window.innerWidth < 1024) {
+      onClose();
+    }
   };
 
   // Close dropdown on click outside
@@ -272,9 +285,25 @@ const Sidebar = () => {
     return () => document.removeEventListener("mousedown", close);
   }, [examDropdownOpen]);
 
+  // Close sidebar on escape key (mobile)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && onClose) {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose]);
+
   if (isLoading) {
     return (
-      <aside className="w-72 bg-white border-r border-gray-200 hidden lg:block">
+      <aside
+        className={`fixed lg:static top-0 left-0 bottom-0 w-72 bg-white border-r border-gray-200 z-[50] lg:z-auto transform transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        } lg:flex flex-col overflow-y-auto shadow-sm`}
+      >
         <div className="p-6 space-y-4 animate-pulse">
           <div className="h-12 bg-gray-100 rounded-lg"></div>
           {[...Array(3)].map((_, i) => (
@@ -286,8 +315,42 @@ const Sidebar = () => {
   }
 
   return (
-    <aside className="w-72 bg-white border-r border-gray-200 hidden lg:flex flex-col overflow-y-auto shadow-sm">
-      <div className="p-4 space-y-4">
+    <aside
+      ref={sidebarRef}
+      className={`fixed lg:static top-0 left-0 bottom-0  w-72 bg-white border-r border-gray-200 z-[55] lg:z-auto transform transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      } lg:flex flex-col overflow-y-auto shadow-sm`}
+    >
+      <div className="p-4 space-y-4 h-full">
+        {/* Mobile Header with Close Button */}
+        <div className="flex items-center  justify-between mb-4 lg:hidden pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <FaCalendar className="text-indigo-600 text-lg" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Navigation Menu
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Close navigation menu"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
         {/* Exam Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -354,7 +417,7 @@ const Sidebar = () => {
                     <button
                       onClick={() => {
                         const examSlug = createSlug(selectedExam.name);
-                        goTo(`/${examSlug}/${subKey}`);
+                        handleNavigation(`/${examSlug}/${subKey}`);
                         setExpandedSubjects((p) => ({ ...p, [subKey]: true }));
                       }}
                       title={sub.name}
@@ -400,7 +463,7 @@ const Sidebar = () => {
                                         const examSlug = createSlug(
                                           selectedExam.name
                                         );
-                                        goTo(
+                                        handleNavigation(
                                           `/${examSlug}/${subKey}/${unitKey}`
                                         );
                                       }}
@@ -453,7 +516,7 @@ const Sidebar = () => {
                                                         createSlug(
                                                           selectedExam.name
                                                         );
-                                                      goTo(
+                                                      handleNavigation(
                                                         `/${examSlug}/${subKey}/${unitKey}/${chapterKey}`
                                                       );
                                                     }}
@@ -510,7 +573,7 @@ const Sidebar = () => {
                                                             <button
                                                               key={topic.slug}
                                                               onClick={() =>
-                                                                goTo(
+                                                                handleNavigation(
                                                                   `/${createSlug(
                                                                     selectedExam.name
                                                                   )}/${subKey}/${unitKey}/${chapterKey}/${encodeURIComponent(
