@@ -2,8 +2,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import MainLayout from "../layout/MainLayout";
-import { FaGraduationCap, FaSpinner } from "react-icons/fa";
+import { FaGraduationCap } from "react-icons/fa";
 import ListItem from "../components/ListItem";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
 import { fetchExamById, fetchSubjectsByExam, createSlug } from "../lib/api";
 import { useDataFetching } from "../lib/hooks/useDataFetching";
 import { ERROR_MESSAGES, PLACEHOLDERS } from "@/constants";
@@ -53,30 +55,11 @@ const ExamPage = () => {
   const error = examError || subjectsError;
 
   if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="space-y-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <FaSpinner className="text-indigo-600 text-4xl animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">{PLACEHOLDERS.LOADING}</p>
-            </div>
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return <LoadingState />;
   }
 
   if (error || !exam) {
-    return (
-      <MainLayout>
-        <div className="space-y-8">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error || ERROR_MESSAGES.EXAM_NOT_FOUND}
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return <ErrorState message={error || ERROR_MESSAGES.EXAM_NOT_FOUND} />;
   }
 
   return (

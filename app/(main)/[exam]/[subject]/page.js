@@ -12,6 +12,9 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import ListItem from "../../components/ListItem";
+import LoadingState from "../../components/LoadingState";
+import ErrorState from "../../components/ErrorState";
+import { ERROR_MESSAGES } from "@/constants";
 import {
   fetchExamById,
   fetchSubjectsByExam,
@@ -84,28 +87,11 @@ const SubjectPage = () => {
   }, [examId, subjectSlug]);
 
   if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-32 bg-gray-200 rounded-xl"></div>
-            <div className="h-64 bg-gray-200 rounded-xl"></div>
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return <LoadingState />;
   }
 
   if (error || !exam || !subject) {
-    return (
-      <MainLayout>
-        <div className="space-y-6">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error || "Subject not found"}
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return <ErrorState message={error || ERROR_MESSAGES.SUBJECT_NOT_FOUND} />;
   }
 
   const examSlug = createSlug(exam.name);

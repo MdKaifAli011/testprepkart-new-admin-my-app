@@ -9,6 +9,9 @@ import {
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
+import LoadingState from "../../../../../../components/LoadingState";
+import ErrorState from "../../../../../../components/ErrorState";
+import { ERROR_MESSAGES } from "@/constants";
 import {
   fetchExamById,
   fetchSubjectsByExam,
@@ -170,16 +173,7 @@ const SubTopicPage = () => {
   }, [examId, subjectSlug, unitSlug, chapterSlug, topicSlug, subtopicSlug]);
 
   if (isLoading) {
-    return (
-      <MainLayout>
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-32 bg-gray-200 rounded-xl"></div>
-            <div className="h-64 bg-gray-200 rounded-xl"></div>
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return <LoadingState />;
   }
 
   if (
@@ -191,15 +185,7 @@ const SubTopicPage = () => {
     !topic ||
     !subTopic
   ) {
-    return (
-      <MainLayout>
-        <div className="space-y-6">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error || "Sub Topic not found"}
-          </div>
-        </div>
-      </MainLayout>
-    );
+    return <ErrorState message={error || ERROR_MESSAGES.SUBTOPIC_NOT_FOUND} />;
   }
 
   const examSlug = createSlug(exam.name);

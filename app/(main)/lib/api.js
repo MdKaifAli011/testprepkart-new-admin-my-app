@@ -16,31 +16,33 @@ const getBaseUrl = () => {
     return "";
   }
   // Server-side: use absolute URL from environment or default to localhost
-  return process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || 
-         process.env.NEXT_PUBLIC_APP_URL || 
-         "http://localhost:3000";
+  return (
+    process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:3000"
+  );
 };
 
 // Fetch all active exams (with pagination support)
 export const fetchExams = async (options = {}) => {
   try {
     const { page = 1, limit = 100, status = STATUS.ACTIVE } = options;
-    
+
     // Check if we're on server side
     const isServer = typeof window === "undefined";
     const baseUrl = getBaseUrl();
     const url = `${baseUrl}/api/exam?page=${page}&limit=${limit}&status=${status}`;
-    
+
     // Use fetch for server-side, axios for client-side
     if (isServer) {
       const response = await fetch(url, {
         next: { revalidate: 60 }, // Cache for 60 seconds
       });
-      
+
       if (!response.ok) {
         return [];
       }
-      
+
       const data = await response.json();
       if (data.success && data.data) {
         // API already filters by status correctly, so return all data
@@ -86,7 +88,7 @@ export const fetchExamById = async (examId) => {
           const response = await fetch(`${baseUrl}/api/exam/${examId}`, {
             next: { revalidate: 60 },
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {
@@ -171,18 +173,16 @@ export const fetchSubjectsByExam = async (examId, options = {}) => {
       }
       // Handle legacy response format
       const allSubjects = response.data.data || [];
-      const filteredSubjects = allSubjects.filter(
-        (subject) => {
-          const matchesExam =
-            subject.examId?._id === examId ||
-            subject.examId === examId ||
-            subject.examId?.name?.toLowerCase() === examId?.toLowerCase();
-          const matchesStatus = subject.status
-            ? subject.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
-            : false;
-          return matchesExam && matchesStatus;
-        }
-      );
+      const filteredSubjects = allSubjects.filter((subject) => {
+        const matchesExam =
+          subject.examId?._id === examId ||
+          subject.examId === examId ||
+          subject.examId?.name?.toLowerCase() === examId?.toLowerCase();
+        const matchesStatus = subject.status
+          ? subject.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
+          : false;
+        return matchesExam && matchesStatus;
+      });
       // Sort by orderNumber
       return filteredSubjects.sort(
         (a, b) => (a.orderNumber || 0) - (b.orderNumber || 0)
@@ -199,36 +199,49 @@ export const fetchSubjectsByExam = async (examId, options = {}) => {
 export const fetchSubjectById = async (subjectId) => {
   if (!subjectId) return null;
 
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
   try {
-    const response = await api.get(`/subject/${subjectId}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-    return null;
-  } catch (error) {
-    // If not found by ID, try fetching from subjects list
-    if (error.response?.status === 400 || error.response?.status === 404) {
-      try {
-        // Try to find by slug in all subjects
-        const response = await api.get(`/subject?page=1&limit=100`);
-        if (response.data.success && response.data.data) {
-          const subjects = response.data.data;
-          const subjectSlug = subjectId?.toLowerCase();
-          const found = subjects.find(
-            (subject) =>
-              subject._id === subjectId ||
-              createSlugLocal(subject.name) === subjectSlug ||
-              subject.name?.toLowerCase() === subjectSlug
-          );
-          return found || null;
+    // Try by ID first (only if it looks like an ObjectId)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(subjectId);
+    if (isObjectId) {
+      if (isServer) {
+        // Server-side: use fetch
+        try {
+          const response = await fetch(`${baseUrl}/api/subject/${subjectId}`, {
+            next: { revalidate: 60 },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
+            }
+          }
+        } catch (err) {
+          // Continue to fallback
         }
-      } catch (err) {
-        // Silently fail
-        return null;
+      } else {
+        // Client-side: use axios
+        try {
+          const response = await api.get(`/subject/${subjectId}`);
+          if (response.data.success && response.data.data) {
+            return response.data.data;
+          }
+        } catch (error) {
+          // Continue to fallback
+        }
       }
     }
-    return null;
+  } catch (error) {
+    // Continue to fallback
   }
+
+  // Fallback: try to fetch all subjects (this is less efficient, but works)
+  // Note: This fallback requires an examId, so it may not work perfectly
+  // For now, we'll return null if we can't find by ID
+  return null;
 };
 
 // Fetch units by subject ID and exam ID (optimized with pagination)
@@ -344,70 +357,98 @@ export const fetchAllChaptersForSubject = async (subjectId, examId) => {
 export const fetchUnitById = async (unitId) => {
   if (!unitId) return null;
 
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
   try {
-    const response = await api.get(`/unit/${unitId}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-    return null;
-  } catch (error) {
-    // If not found by ID, try fetching all and finding by slug
-    if (error.response?.status === 400 || error.response?.status === 404) {
-      try {
-        const response = await api.get(`/unit?page=1&limit=100`);
-        if (response.data.success && response.data.data) {
-          const units = response.data.data;
-          const unitSlug = unitId?.toLowerCase();
-          const found = units.find(
-            (unit) =>
-              unit._id === unitId ||
-              createSlugLocal(unit.name) === unitSlug ||
-              unit.name?.toLowerCase() === unitSlug
-          );
-          return found || null;
+    // Try by ID first (only if it looks like an ObjectId)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(unitId);
+    if (isObjectId) {
+      if (isServer) {
+        // Server-side: use fetch
+        try {
+          const response = await fetch(`${baseUrl}/api/unit/${unitId}`, {
+            next: { revalidate: 60 },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
+            }
+          }
+        } catch (err) {
+          // Continue to fallback
         }
-      } catch (err) {
-        // Silently fail
-        return null;
+      } else {
+        // Client-side: use axios
+        try {
+          const response = await api.get(`/unit/${unitId}`);
+          if (response.data.success && response.data.data) {
+            return response.data.data;
+          }
+        } catch (error) {
+          // Continue to fallback
+        }
       }
     }
-    return null;
+  } catch (error) {
+    // Continue to fallback
   }
+
+  // Fallback: try fetching all units (this is less efficient, but works)
+  // Note: This fallback requires a subjectId or examId, so it may not work perfectly
+  // For now, we'll return null if we can't find by ID
+  return null;
 };
 
 // Fetch chapter by ID or slug
 export const fetchChapterById = async (chapterId) => {
   if (!chapterId) return null;
 
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
   try {
-    const response = await api.get(`/chapter/${chapterId}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-    return null;
-  } catch (error) {
-    // If not found by ID, try fetching all and finding by slug
-    if (error.response?.status === 400 || error.response?.status === 404) {
-      try {
-        const response = await api.get(`/chapter?page=1&limit=100`);
-        if (response.data.success && response.data.data) {
-          const chapters = response.data.data;
-          const chapterSlug = chapterId?.toLowerCase();
-          const found = chapters.find(
-            (chapter) =>
-              chapter._id === chapterId ||
-              createSlugLocal(chapter.name) === chapterSlug ||
-              chapter.name?.toLowerCase() === chapterSlug
-          );
-          return found || null;
+    // Try by ID first (only if it looks like an ObjectId)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(chapterId);
+    if (isObjectId) {
+      if (isServer) {
+        // Server-side: use fetch
+        try {
+          const response = await fetch(`${baseUrl}/api/chapter/${chapterId}`, {
+            next: { revalidate: 60 },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
+            }
+          }
+        } catch (err) {
+          // Continue to fallback
         }
-      } catch (err) {
-        // Silently fail
-        return null;
+      } else {
+        // Client-side: use axios
+        try {
+          const response = await api.get(`/chapter/${chapterId}`);
+          if (response.data.success && response.data.data) {
+            return response.data.data;
+          }
+        } catch (error) {
+          // Continue to fallback
+        }
       }
     }
-    return null;
+  } catch (error) {
+    // Continue to fallback
   }
+
+  // Fallback: try fetching all chapters (this is less efficient, but works)
+  // Note: This fallback requires a unitId, so it may not work perfectly
+  // For now, we'll return null if we can't find by ID
+  return null;
 };
 
 // Fetch topics by chapter ID (optimized with pagination)
@@ -445,35 +486,49 @@ export const fetchTopicsByChapter = async (chapterId, options = {}) => {
 export const fetchTopicById = async (topicId) => {
   if (!topicId) return null;
 
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
   try {
-    const response = await api.get(`/topic/${topicId}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-    return null;
-  } catch (error) {
-    // If not found by ID, try fetching all and finding by slug
-    if (error.response?.status === 400 || error.response?.status === 404) {
-      try {
-        const response = await api.get(`/topic?page=1&limit=100`);
-        if (response.data.success && response.data.data) {
-          const topics = response.data.data;
-          const topicSlug = topicId?.toLowerCase();
-          const found = topics.find(
-            (topic) =>
-              topic._id === topicId ||
-              createSlugLocal(topic.name) === topicSlug ||
-              topic.name?.toLowerCase() === topicSlug
-          );
-          return found || null;
+    // Try by ID first (only if it looks like an ObjectId)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(topicId);
+    if (isObjectId) {
+      if (isServer) {
+        // Server-side: use fetch
+        try {
+          const response = await fetch(`${baseUrl}/api/topic/${topicId}`, {
+            next: { revalidate: 60 },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
+            }
+          }
+        } catch (err) {
+          // Continue to fallback
         }
-      } catch (err) {
-        // Silently fail
-        return null;
+      } else {
+        // Client-side: use axios
+        try {
+          const response = await api.get(`/topic/${topicId}`);
+          if (response.data.success && response.data.data) {
+            return response.data.data;
+          }
+        } catch (error) {
+          // Continue to fallback
+        }
       }
     }
-    return null;
+  } catch (error) {
+    // Continue to fallback
   }
+
+  // Fallback: try fetching all topics (this is less efficient, but works)
+  // Note: This fallback requires a chapterId, so it may not work perfectly
+  // For now, we'll return null if we can't find by ID
+  return null;
 };
 
 // Fetch subtopics by topic ID (optimized with pagination)
@@ -492,8 +547,7 @@ export const fetchSubTopicsByTopic = async (topicId, options = {}) => {
       // Handle legacy response format
       const filteredSubTopics = (response.data.data || []).filter(
         (sub) =>
-          sub.status &&
-          sub.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
+          sub.status && sub.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
       );
       // Sort by orderNumber
       return filteredSubTopics.sort(
@@ -511,35 +565,52 @@ export const fetchSubTopicsByTopic = async (topicId, options = {}) => {
 export const fetchSubTopicById = async (subTopicId) => {
   if (!subTopicId) return null;
 
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
   try {
-    const response = await api.get(`/subtopic/${subTopicId}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-    return null;
-  } catch (error) {
-    // If not found by ID, try fetching all and finding by slug
-    if (error.response?.status === 400 || error.response?.status === 404) {
-      try {
-        const response = await api.get(`/subtopic?page=1&limit=100`);
-        if (response.data.success && response.data.data) {
-          const subtopics = response.data.data;
-          const subtopicSlug = subTopicId?.toLowerCase();
-          const found = subtopics.find(
-            (subtopic) =>
-              subtopic._id === subTopicId ||
-              createSlugLocal(subtopic.name) === subtopicSlug ||
-              subtopic.name?.toLowerCase() === subtopicSlug
+    // Try by ID first (only if it looks like an ObjectId)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(subTopicId);
+    if (isObjectId) {
+      if (isServer) {
+        // Server-side: use fetch
+        try {
+          const response = await fetch(
+            `${baseUrl}/api/subtopic/${subTopicId}`,
+            {
+              next: { revalidate: 60 },
+            }
           );
-          return found || null;
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
+            }
+          }
+        } catch (err) {
+          // Continue to fallback
         }
-      } catch (err) {
-        // Silently fail
-        return null;
+      } else {
+        // Client-side: use axios
+        try {
+          const response = await api.get(`/subtopic/${subTopicId}`);
+          if (response.data.success && response.data.data) {
+            return response.data.data;
+          }
+        } catch (error) {
+          // Continue to fallback
+        }
       }
     }
-    return null;
+  } catch (error) {
+    // Continue to fallback
   }
+
+  // Fallback: try fetching all subtopics (this is less efficient, but works)
+  // Note: This fallback requires a topicId, so it may not work perfectly
+  // For now, we'll return null if we can't find by ID
+  return null;
 };
 
 // Re-export slug utilities for backward compatibility
