@@ -6,15 +6,25 @@ import { FaGraduationCap } from "react-icons/fa";
 import ListItem from "../components/ListItem";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
-import { fetchExamById, fetchSubjectsByExam, createSlug } from "../lib/api";
+import { fetchExamById, fetchSubjectsByExam, createSlug, fetchExams } from "../lib/api";
 import { useDataFetching } from "../lib/hooks/useDataFetching";
 import { ERROR_MESSAGES, PLACEHOLDERS } from "@/constants";
+import {
+  getNextExam,
+  getPreviousExam,
+} from "../lib/hierarchicalNavigation";
+import Link from "next/link";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
 const ExamPage = () => {
   const { exam: examId } = useParams();
   const [activeTab, setActiveTab] = useState(TABS[0]);
+  const [nextNav, setNextNav] = useState(null);
+  const [prevNav, setPrevNav] = useState(null);
+  const [exams, setExams] = useState([]);
+  const [currentExamIndex, setCurrentExamIndex] = useState(-1);
 
   // Optimized data fetching with caching
   const {
@@ -45,6 +55,45 @@ const ExamPage = () => {
     [exam?._id, examId],
     { cacheKey: `subjects-${exam?._id || examId}`, enabled: !!exam }
   );
+
+  // Calculate navigation
+  useEffect(() => {
+    const calculateNavigation = async () => {
+      if (!exam?._id) return;
+      
+      try {
+        // Fetch all exams to get index
+        const allExams = await fetchExams({ limit: 100 });
+        setExams(allExams);
+        const examIndex = allExams.findIndex((e) => e._id === exam._id);
+        setCurrentExamIndex(examIndex);
+
+        // Calculate next navigation
+        const next = await getNextExam({
+          examId: exam._id,
+          examSlug: examSlug,
+          currentIndex: examIndex,
+          allItems: allExams,
+        });
+        setNextNav(next);
+
+        // Calculate previous navigation
+        const prev = await getPreviousExam({
+          examId: exam._id,
+          examSlug: examSlug,
+          currentIndex: examIndex,
+          allItems: allExams,
+        });
+        setPrevNav(prev);
+      } catch (error) {
+        console.error("Error calculating navigation:", error);
+      }
+    };
+
+    if (exam) {
+      calculateNavigation();
+    }
+  }, [exam, examSlug]);
 
   // Memoize exam slug to avoid recalculation - MUST be before any early returns
   const examSlug = useMemo(() => {
@@ -173,6 +222,42 @@ const ExamPage = () => {
                 {PLACEHOLDERS.NO_DATA}
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Navigation */}
+        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+            >
+              <FaChevronLeft className="text-xs" />
+              <span>Back to Home</span>
+            </Link>
+
+            <div className="flex items-center gap-4">
+              {prevNav && (
+                <Link
+                  href={prevNav.url}
+                  className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={prevNav.label}
+                >
+                  <FaChevronLeft className="text-xs" />
+                  <span className="hidden sm:inline">Previous</span>
+                </Link>
+              )}
+              {nextNav && (
+                <Link
+                  href={nextNav.url}
+                  className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={nextNav.label}
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <FaChevronRight className="text-xs" />
+                </Link>
+              )}
+            </div>
           </div>
         </section>
       </div>

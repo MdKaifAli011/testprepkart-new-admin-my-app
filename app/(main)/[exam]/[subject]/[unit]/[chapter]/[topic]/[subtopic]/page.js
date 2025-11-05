@@ -27,6 +27,10 @@ import {
   createSlug,
   findByIdOrSlug,
 } from "../../../../../../lib/api";
+import {
+  getNextSubtopic,
+  getPreviousSubtopic,
+} from "../../../../../../lib/hierarchicalNavigation";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -53,6 +57,8 @@ const SubTopicPage = () => {
   const [currentSubTopicIndex, setCurrentSubTopicIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [nextNav, setNextNav] = useState(null);
+  const [prevNav, setPrevNav] = useState(null);
 
   // Fetch exam, subject, unit, chapter, topic, and subtopic
   useEffect(() => {
@@ -152,6 +158,39 @@ const SubTopicPage = () => {
             st.name?.toLowerCase() === subtopicSlug.toLowerCase()
         );
         setCurrentSubTopicIndex(index);
+
+        // Calculate hierarchical navigation
+        const next = await getNextSubtopic({
+          examId: examIdValue,
+          examSlug: createSlug(fetchedExam.name),
+          subjectId: foundSubject._id,
+          subjectSlug: createSlug(foundSubject.name),
+          unitId: foundUnit._id,
+          unitSlug: createSlug(foundUnit.name),
+          chapterId: foundChapter._id,
+          chapterSlug: createSlug(foundChapter.name),
+          topicId: foundTopic._id,
+          topicSlug: createSlug(foundTopic.name),
+          currentIndex: index,
+          allItems: fetchedSubTopics,
+        });
+        setNextNav(next);
+
+        const prev = await getPreviousSubtopic({
+          examId: examIdValue,
+          examSlug: createSlug(fetchedExam.name),
+          subjectId: foundSubject._id,
+          subjectSlug: createSlug(foundSubject.name),
+          unitId: foundUnit._id,
+          unitSlug: createSlug(foundUnit.name),
+          chapterId: foundChapter._id,
+          chapterSlug: createSlug(foundChapter.name),
+          topicId: foundTopic._id,
+          topicSlug: createSlug(foundTopic.name),
+          currentIndex: index,
+          allItems: fetchedSubTopics,
+        });
+        setPrevNav(prev);
       } catch (err) {
         // Error handled by setError
         setError("Failed to load subtopic data. Please try again later.");
@@ -193,14 +232,6 @@ const SubTopicPage = () => {
   const unitSlugValue = createSlug(unit.name);
   const chapterSlugValue = createSlug(chapter.name);
   const topicSlugValue = createSlug(topic.name);
-
-  // Navigation helpers
-  const prevSubTopic =
-    currentSubTopicIndex > 0 ? allSubTopics[currentSubTopicIndex - 1] : null;
-  const nextSubTopic =
-    currentSubTopicIndex < allSubTopics.length - 1
-      ? allSubTopics[currentSubTopicIndex + 1]
-      : null;
 
   return (
     <MainLayout>
@@ -355,19 +386,21 @@ const SubTopicPage = () => {
             </Link>
 
             <div className="flex items-center gap-4">
-              {prevSubTopic && (
+              {prevNav && (
                 <Link
-                  href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}/${chapterSlugValue}/${topicSlugValue}/${createSlug(prevSubTopic.name)}`}
+                  href={prevNav.url}
                   className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={prevNav.label}
                 >
                   <FaChevronLeft className="text-xs" />
                   <span className="hidden sm:inline">Previous</span>
                 </Link>
               )}
-              {nextSubTopic && (
+              {nextNav && (
                 <Link
-                  href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}/${chapterSlugValue}/${topicSlugValue}/${createSlug(nextSubTopic.name)}`}
+                  href={nextNav.url}
                   className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={nextNav.label}
                 >
                   <span className="hidden sm:inline">Next</span>
                   <FaChevronRight className="text-xs" />

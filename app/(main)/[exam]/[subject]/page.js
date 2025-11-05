@@ -9,6 +9,7 @@ import {
   FaUsers,
   FaChartLine,
   FaTrophy,
+  FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
 import ListItem from "../../components/ListItem";
@@ -23,6 +24,10 @@ import {
   createSlug,
   findByIdOrSlug,
 } from "../../lib/api";
+import {
+  getNextSubject,
+  getPreviousSubject,
+} from "../../lib/hierarchicalNavigation";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -35,8 +40,12 @@ const SubjectPage = () => {
   const [exam, setExam] = useState(null);
   const [subject, setSubject] = useState(null);
   const [units, setUnits] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [currentSubjectIndex, setCurrentSubjectIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [nextNav, setNextNav] = useState(null);
+  const [prevNav, setPrevNav] = useState(null);
 
   // Fetch exam, subject, and units
   useEffect(() => {
@@ -56,6 +65,7 @@ const SubjectPage = () => {
         // Fetch subjects for this exam
         const examIdValue = fetchedExam._id || examId;
         const fetchedSubjects = await fetchSubjectsByExam(examIdValue);
+        setSubjects(fetchedSubjects);
         
         // Find subject by slug
         const foundSubject = findByIdOrSlug(fetchedSubjects, subjectSlug);
@@ -67,6 +77,15 @@ const SubjectPage = () => {
         // Fetch full subject data including content
         const fullSubjectData = await fetchSubjectById(foundSubject._id);
         setSubject(fullSubjectData || foundSubject);
+
+        // Find current subject index for navigation
+        const subjectIndex = fetchedSubjects.findIndex(
+          (s) =>
+            s._id === foundSubject._id ||
+            createSlug(s.name) === subjectSlug ||
+            s.name?.toLowerCase() === subjectSlug.toLowerCase()
+        );
+        setCurrentSubjectIndex(subjectIndex);
         
         // Fetch units for this subject
         const fetchedUnits = await fetchUnitsBySubject(
@@ -74,6 +93,27 @@ const SubjectPage = () => {
           examIdValue
         );
         setUnits(fetchedUnits);
+
+        // Calculate hierarchical navigation
+        const next = await getNextSubject({
+          examId: examIdValue,
+          examSlug: createSlug(fetchedExam.name),
+          subjectId: foundSubject._id,
+          subjectSlug: createSlug(foundSubject.name),
+          currentIndex: subjectIndex,
+          allItems: fetchedSubjects,
+        });
+        setNextNav(next);
+
+        const prev = await getPreviousSubject({
+          examId: examIdValue,
+          examSlug: createSlug(fetchedExam.name),
+          subjectId: foundSubject._id,
+          subjectSlug: createSlug(foundSubject.name),
+          currentIndex: subjectIndex,
+          allItems: fetchedSubjects,
+        });
+        setPrevNav(prev);
       } catch (err) {
         setError("Failed to load subject data. Please try again later.");
       } finally {
@@ -304,6 +344,42 @@ const SubjectPage = () => {
                 No units available for this subject.
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Navigation */}
+        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <Link
+              href={`/${examSlug}`}
+              className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+            >
+              <FaChevronLeft className="text-xs" />
+              <span>Back to {exam.name}</span>
+            </Link>
+
+            <div className="flex items-center gap-4">
+              {prevNav && (
+                <Link
+                  href={prevNav.url}
+                  className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={prevNav.label}
+                >
+                  <FaChevronLeft className="text-xs" />
+                  <span className="hidden sm:inline">Previous</span>
+                </Link>
+              )}
+              {nextNav && (
+                <Link
+                  href={nextNav.url}
+                  className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={nextNav.label}
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <FaChevronRight className="text-xs" />
+                </Link>
+              )}
+            </div>
           </div>
         </section>
       </div>

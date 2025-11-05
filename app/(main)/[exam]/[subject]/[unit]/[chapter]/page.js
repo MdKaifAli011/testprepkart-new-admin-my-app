@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import MainLayout from "../../../../layout/MainLayout";
 import { useParams, notFound, useRouter } from "next/navigation";
 import Link from "next/link";
-import { FaBook, FaChevronRight } from "react-icons/fa";
+import { FaBook, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import ListItem from "../../../../components/ListItem";
 import LoadingState from "../../../../components/LoadingState";
 import ErrorState from "../../../../components/ErrorState";
@@ -20,6 +20,10 @@ import {
   createSlug,
   findByIdOrSlug,
 } from "../../../../lib/api";
+import {
+  getNextChapter,
+  getPreviousChapter,
+} from "../../../../lib/hierarchicalNavigation";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -39,8 +43,12 @@ const ChapterPage = () => {
   const [unit, setUnit] = useState(null);
   const [chapter, setChapter] = useState(null);
   const [topics, setTopics] = useState([]);
+  const [chapters, setChapters] = useState([]);
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [nextNav, setNextNav] = useState(null);
+  const [prevNav, setPrevNav] = useState(null);
 
   // Fetch exam, subject, unit, chapter, and topics
   useEffect(() => {
@@ -91,6 +99,7 @@ const ChapterPage = () => {
 
         // Fetch chapters for this unit
         const fetchedChapters = await fetchChaptersByUnit(foundUnit._id);
+        setChapters(fetchedChapters);
 
         // Find chapter by slug
         const foundChapter = findByIdOrSlug(fetchedChapters, chapterSlug);
@@ -103,9 +112,47 @@ const ChapterPage = () => {
         const fullChapterData = await fetchChapterById(foundChapter._id);
         setChapter(fullChapterData || foundChapter);
 
+        // Find current chapter index for navigation
+        const chapterIndex = fetchedChapters.findIndex(
+          (c) =>
+            c._id === foundChapter._id ||
+            createSlug(c.name) === chapterSlug ||
+            c.name?.toLowerCase() === chapterSlug.toLowerCase()
+        );
+        setCurrentChapterIndex(chapterIndex);
+
         // Fetch topics for this chapter
         const fetchedTopics = await fetchTopicsByChapter(foundChapter._id);
         setTopics(fetchedTopics);
+
+        // Calculate hierarchical navigation
+        const next = await getNextChapter({
+          examId: examIdValue,
+          examSlug: createSlug(fetchedExam.name),
+          subjectId: foundSubject._id,
+          subjectSlug: createSlug(foundSubject.name),
+          unitId: foundUnit._id,
+          unitSlug: createSlug(foundUnit.name),
+          chapterId: foundChapter._id,
+          chapterSlug: createSlug(foundChapter.name),
+          currentIndex: chapterIndex,
+          allItems: fetchedChapters,
+        });
+        setNextNav(next);
+
+        const prev = await getPreviousChapter({
+          examId: examIdValue,
+          examSlug: createSlug(fetchedExam.name),
+          subjectId: foundSubject._id,
+          subjectSlug: createSlug(foundSubject.name),
+          unitId: foundUnit._id,
+          unitSlug: createSlug(foundUnit.name),
+          chapterId: foundChapter._id,
+          chapterSlug: createSlug(foundChapter.name),
+          currentIndex: chapterIndex,
+          allItems: fetchedChapters,
+        });
+        setPrevNav(prev);
       } catch (err) {
         // Error handled by setError
         setError("Failed to load chapter data. Please try again later.");
@@ -305,6 +352,42 @@ const ChapterPage = () => {
                 No topics available for this chapter.
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Navigation */}
+        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <Link
+              href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}`}
+              className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+            >
+              <FaChevronLeft className="text-xs" />
+              <span>Back to {unit.name}</span>
+            </Link>
+
+            <div className="flex items-center gap-4">
+              {prevNav && (
+                <Link
+                  href={prevNav.url}
+                  className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={prevNav.label}
+                >
+                  <FaChevronLeft className="text-xs" />
+                  <span className="hidden sm:inline">Previous</span>
+                </Link>
+              )}
+              {nextNav && (
+                <Link
+                  href={nextNav.url}
+                  className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  title={nextNav.label}
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <FaChevronRight className="text-xs" />
+                </Link>
+              )}
+            </div>
           </div>
         </section>
       </div>
