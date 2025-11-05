@@ -230,50 +230,18 @@ const UnitPage = () => {
                             __html: unit.content,
                           }}
                         />
+                        
                       ) : (
                         <>
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">
-                            Unit Overview
-                          </h3>
-                          <p className="text-gray-600">
-                            Welcome to {unit.name} in {subject.name} for{" "}
-                            {exam.name}. Here you&apos;ll find comprehensive
-                            resources, study materials, and track your progress
-                            across all chapters.
-                          </p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">No content available for this unit.</h3>
+                        <p className="text-gray-600 mb-4">
+                          Content can be added from the admin panel.
+                          
+                        </p>
                         </>
                       )}
 
-                      {/* Unit Stats */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-                          <FaBook className="text-blue-600 text-2xl mb-2" />
-                          <h4 className="font-semibold text-gray-900 mb-1">
-                            Chapters
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {chapters.length} Chapters
-                          </p>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
-                          <FaChartLine className="text-purple-600 text-2xl mb-2" />
-                          <h4 className="font-semibold text-gray-900 mb-1">
-                            Unit Overview
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Explore all chapters
-                          </p>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
-                          <FaTrophy className="text-green-600 text-2xl mb-2" />
-                          <h4 className="font-semibold text-gray-900 mb-1">
-                            Study Resources
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Access study materials
-                          </p>
-                        </div>
-                      </div>
+                      
                     </div>
                   ),
                   "Discussion Forum": (

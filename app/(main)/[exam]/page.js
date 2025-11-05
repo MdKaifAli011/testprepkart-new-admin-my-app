@@ -6,13 +6,15 @@ import { FaGraduationCap } from "react-icons/fa";
 import ListItem from "../components/ListItem";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
-import { fetchExamById, fetchSubjectsByExam, createSlug, fetchExams } from "../lib/api";
+import {
+  fetchExamById,
+  fetchSubjectsByExam,
+  createSlug,
+  fetchExams,
+} from "../lib/api";
 import { useDataFetching } from "../lib/hooks/useDataFetching";
 import { ERROR_MESSAGES, PLACEHOLDERS } from "@/constants";
-import {
-  getNextExam,
-  getPreviousExam,
-} from "../lib/hierarchicalNavigation";
+import { getNextExam, getPreviousExam } from "../lib/hierarchicalNavigation";
 import Link from "next/link";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
@@ -56,11 +58,16 @@ const ExamPage = () => {
     { cacheKey: `subjects-${exam?._id || examId}`, enabled: !!exam }
   );
 
+  // Memoize exam slug to avoid recalculation - MUST be before any useEffect that uses it
+  const examSlug = useMemo(() => {
+    return exam ? createSlug(exam.name) : "";
+  }, [exam]);
+
   // Calculate navigation
   useEffect(() => {
     const calculateNavigation = async () => {
       if (!exam?._id) return;
-      
+
       try {
         // Fetch all exams to get index
         const allExams = await fetchExams({ limit: 100 });
@@ -94,11 +101,6 @@ const ExamPage = () => {
       calculateNavigation();
     }
   }, [exam, examSlug]);
-
-  // Memoize exam slug to avoid recalculation - MUST be before any early returns
-  const examSlug = useMemo(() => {
-    return exam ? createSlug(exam.name) : "";
-  }, [exam]);
 
   const isLoading = examLoading || subjectsLoading;
   const error = examError || subjectsError;
