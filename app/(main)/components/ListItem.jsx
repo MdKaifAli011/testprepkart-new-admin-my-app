@@ -1,9 +1,9 @@
 "use client";
-import React from "react";
+import React, { memo } from "react";
 import Link from "next/link";
 import { FaCheck, FaEye } from "react-icons/fa";
 
-const ListItem = ({ item, index, href, color }) => {
+const ListItem = memo(({ item, index, href, color }) => {
   // Color variants for the vertical bar
   const colorVariants = {
     blue: "bg-blue-500",
@@ -91,7 +91,9 @@ const ListItem = ({ item, index, href, color }) => {
       {content}
     </div>
   );
-};
+});
+
+ListItem.displayName = "ListItem";
 
 export default ListItem;
 

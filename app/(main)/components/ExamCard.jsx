@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo } from "react";
+import React, { useMemo, memo } from "react";
 import Link from "next/link";
 import {
   FaBook,
@@ -102,7 +102,7 @@ const getDefaultServices = (examName) => {
   return ["Exam Prep Courses", "Study Materials", "Practice Tests"];
 };
 
-const ExamCard = ({ exam }) => {
+const ExamCard = memo(({ exam }) => {
   const style = useMemo(() => getExamStyle(exam.name), [exam.name]);
   const services = useMemo(() => getDefaultServices(exam.name), [exam.name]);
   const examSlug = useMemo(() => createSlug(exam.name), [exam.name]);
@@ -149,6 +149,8 @@ const ExamCard = ({ exam }) => {
       </div>
     </div>
   );
-};
+});
+
+ExamCard.displayName = "ExamCard";
 
 export default ExamCard;

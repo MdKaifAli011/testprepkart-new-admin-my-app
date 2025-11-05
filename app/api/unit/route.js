@@ -6,6 +6,10 @@ import { parsePagination, createPaginationResponse } from "@/utils/pagination";
 import { successResponse, errorResponse, handleApiError } from "@/utils/apiResponse";
 import { STATUS, ERROR_MESSAGES } from "@/constants";
 
+// Cache for frequently accessed queries (simple in-memory cache)
+const queryCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // ---------- GET ALL UNITS ----------
 export async function GET(request) {
   try {
@@ -15,12 +19,13 @@ export async function GET(request) {
     // Parse pagination
     const { page, limit, skip } = parsePagination(searchParams);
     
-    // Get filters
+    // Get filters (normalize status to lowercase for case-insensitive matching)
     const subjectId = searchParams.get("subjectId");
     const examId = searchParams.get("examId");
-    const statusFilter = searchParams.get("status") || STATUS.ACTIVE;
+    const statusFilterParam = searchParams.get("status") || STATUS.ACTIVE;
+    const statusFilter = statusFilterParam.toLowerCase();
 
-    // Build query
+    // Build query with case-insensitive status matching
     const query = {};
     if (subjectId && mongoose.Types.ObjectId.isValid(subjectId)) {
       query.subjectId = subjectId;
@@ -29,24 +34,55 @@ export async function GET(request) {
       query.examId = examId;
     }
     if (statusFilter !== "all") {
-      query.status = statusFilter;
+      query.status = { $regex: new RegExp(`^${statusFilter}$`, "i") };
     }
 
-    // Get total count
-    const total = await Unit.countDocuments(query);
+    // Create cache key
+    const cacheKey = `units-${JSON.stringify(query)}-${page}-${limit}`;
+    const cached = queryCache.get(cacheKey);
+    const now = Date.now();
 
-    // Fetch units with pagination
-    const units = await Unit.find(query)
-      .populate("subjectId", "name")
-      .populate("examId", "name status")
-      .sort({ orderNumber: 1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    // Check cache (only for active status queries to avoid stale data)
+    if (cached && statusFilter === STATUS.ACTIVE && (now - cached.timestamp < CACHE_TTL)) {
+      return NextResponse.json(cached.data);
+    }
 
-    return NextResponse.json(
-      createPaginationResponse(units, total, page, limit)
-    );
+    // Optimize query: only get count if we need pagination info
+    const shouldCount = page === 1 || limit < 100;
+    
+    // Parallel execution for better performance
+    const [total, units] = await Promise.all([
+      shouldCount ? Unit.countDocuments(query) : Promise.resolve(0),
+      Unit.find(query)
+        .populate("subjectId", "name")
+        .populate("examId", "name status")
+        .sort({ orderNumber: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec()
+    ]);
+
+    const response = createPaginationResponse(units, total, page, limit);
+
+    // Cache the response (only for active status)
+    if (statusFilter === STATUS.ACTIVE) {
+      queryCache.set(cacheKey, {
+        data: response,
+        timestamp: now,
+      });
+      
+      // Clean up old cache entries periodically
+      if (queryCache.size > 100) {
+        for (const [key, value] of queryCache.entries()) {
+          if (now - value.timestamp > CACHE_TTL) {
+            queryCache.delete(key);
+          }
+        }
+      }
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }

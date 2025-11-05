@@ -5,8 +5,9 @@ import React, {
   useRef,
   useCallback,
   useMemo,
+  lazy,
+  Suspense,
 } from "react";
-import UnitsTable from "../table/UnitsTable";
 import {
   LoadingWrapper,
   SkeletonPageContent,
@@ -23,6 +24,9 @@ import {
 } from "react-icons/fa";
 import { ToastContainer, useToast } from "../ui/Toast";
 import api from "@/lib/api";
+
+// Lazy load heavy components
+const UnitsTable = lazy(() => import("../table/UnitsTable"));
 
 const UnitsManagement = () => {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -1143,13 +1147,21 @@ const UnitsManagement = () => {
                 )}
               </div>
             ) : (
-              <UnitsTable
-                units={filteredUnits}
-                onEdit={handleEditUnit}
-                onDelete={handleDeleteUnit}
-                onDragEnd={handleDragEnd}
-                onToggleStatus={handleToggleStatus}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center py-12">
+                    <LoadingSpinner size="medium" />
+                  </div>
+                }
+              >
+                <UnitsTable
+                  units={filteredUnits}
+                  onEdit={handleEditUnit}
+                  onDelete={handleDeleteUnit}
+                  onDragEnd={handleDragEnd}
+                  onToggleStatus={handleToggleStatus}
+                />
+              </Suspense>
             )}
           </div>
         </div>

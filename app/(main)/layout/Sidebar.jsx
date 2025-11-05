@@ -151,21 +151,39 @@ const Sidebar = () => {
         const newSubs = {},
           newUnits = {},
           newChaps = {};
-        Object.entries(subjectData).forEach(([sKey, sVal]) => {
-          if (sKey === subjectKey) {
-            newSubs[sKey] = true;
-            Object.entries(sVal.units || {}).forEach(([uKey, uVal]) => {
-              if (uKey === unitKey) {
-                newUnits[uKey] = true;
-                Object.entries(uVal.chapters || {}).forEach(([cKey]) => {
-                  if (cKey === chapterKey) {
-                    newChaps[cKey] = true;
-                  }
-                });
-              }
-            });
+        
+        // If there's a subjectKey in the path, expand based on path
+        if (subjectKey) {
+          Object.entries(subjectData).forEach(([sKey, sVal]) => {
+            if (sKey === subjectKey) {
+              newSubs[sKey] = true;
+              Object.entries(sVal.units || {}).forEach(([uKey, uVal]) => {
+                if (uKey === unitKey) {
+                  newUnits[uKey] = true;
+                  Object.entries(uVal.chapters || {}).forEach(([cKey]) => {
+                    if (cKey === chapterKey) {
+                      newChaps[cKey] = true;
+                    }
+                  });
+                }
+              });
+            }
+          });
+        } else {
+          // If no subjectKey in path, auto-expand first subject and its first unit
+          const subjectEntries = Object.entries(subjectData);
+          if (subjectEntries.length > 0) {
+            const [firstSubjectKey, firstSubject] = subjectEntries[0];
+            newSubs[firstSubjectKey] = true;
+            
+            // Also expand first unit of the first subject
+            const unitEntries = Object.entries(firstSubject.units || {});
+            if (unitEntries.length > 0) {
+              const [firstUnitKey] = unitEntries[0];
+              newUnits[firstUnitKey] = true;
+            }
           }
-        });
+        }
 
         setExpandedSubjects(newSubs);
         setExpandedUnits(newUnits);

@@ -11,17 +11,25 @@ import { SEO_DEFAULTS, APP_CONFIG } from "@/constants";
  * @returns {Object} SEO metadata object
  */
 export function generateMetadata(data, options = {}) {
-  const { type = "", name = "" } = options;
+  const { type = "", name = "", path = "" } = options;
 
   // Use admin-provided SEO data if available, otherwise generate defaults
   const title =
     data?.title || (name ? `${name} - ${APP_CONFIG.name}` : SEO_DEFAULTS.TITLE);
+
+  // Ensure title doesn't exceed recommended length
+  const optimizedTitle = title.length > 60 ? `${title.substring(0, 57)}...` : title;
 
   const description =
     data?.metaDescription ||
     (name
       ? `Prepare for ${name} with ${APP_CONFIG.name}. ${SEO_DEFAULTS.DESCRIPTION}`
       : SEO_DEFAULTS.DESCRIPTION);
+
+  // Ensure description doesn't exceed recommended length
+  const optimizedDescription = description.length > 160 
+    ? `${description.substring(0, 157)}...` 
+    : description;
 
   // Handle keywords - can be string or array
   let keywords = SEO_DEFAULTS.KEYWORDS;
@@ -35,36 +43,57 @@ export function generateMetadata(data, options = {}) {
     } else if (Array.isArray(data.keywords)) {
       keywords = data.keywords;
     }
-    // Add default keywords if not already present
-    keywords = [...new Set([...keywords, ...SEO_DEFAULTS.KEYWORDS])];
+    // Add default keywords if not already present (limit to 10 keywords for performance)
+    keywords = [...new Set([...keywords.slice(0, 10), ...SEO_DEFAULTS.KEYWORDS])];
   } else if (name) {
     // Generate keywords from name
-    keywords = [name, ...SEO_DEFAULTS.KEYWORDS];
+    keywords = [name, ...SEO_DEFAULTS.KEYWORDS].slice(0, 10);
   }
 
+  // Build canonical URL
+  const canonicalUrl = `${APP_CONFIG.url}${path || ""}`;
+
   return {
-    title,
-    description,
-    keywords: keywords.join(", "),
+    title: optimizedTitle,
+    description: optimizedDescription,
+    keywords: keywords.slice(0, 10).join(", "),
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title,
-      description,
+      title: optimizedTitle,
+      description: optimizedDescription,
       type: "website",
-      url: `${APP_CONFIG.url}${options.path || ""}`,
+      url: canonicalUrl,
+      siteName: APP_CONFIG.name,
       images: [
         {
-          url: SEO_DEFAULTS.OG_IMAGE,
+          url: `${APP_CONFIG.url}${SEO_DEFAULTS.OG_IMAGE}`,
           width: 1200,
           height: 630,
-          alt: title,
+          alt: optimizedTitle,
         },
       ],
+      locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
-      images: [SEO_DEFAULTS.OG_IMAGE],
+      title: optimizedTitle,
+      description: optimizedDescription,
+      images: [`${APP_CONFIG.url}${SEO_DEFAULTS.OG_IMAGE}`],
+      creator: "@testprepkart",
+      site: "@testprepkart",
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
   };
 }

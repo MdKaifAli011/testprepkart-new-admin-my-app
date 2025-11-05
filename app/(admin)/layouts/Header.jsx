@@ -18,10 +18,14 @@ const Header = ({ onMenuToggle }) => (
       {/* Logo */}
       <Image
         src="/logo.png"
-        alt="Logo"
+        alt="TestPrepKart Logo"
         width={150}
         height={150}
         className="w-28 sm:w-36 h-auto ml-2 lg:ml-0"
+        priority
+        loading="eager"
+        placeholder="blur"
+        blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PC9zdmc+"
       />
 
       {/* Centered Title */}

@@ -20,11 +20,12 @@ export async function GET(request) {
     // Parse pagination
     const { page, limit, skip } = parsePagination(searchParams);
     
-    // Get filters
+    // Get filters (normalize status to lowercase for case-insensitive matching)
     const topicId = searchParams.get("topicId");
-    const statusFilter = searchParams.get("status") || STATUS.ACTIVE;
+    const statusFilterParam = searchParams.get("status") || STATUS.ACTIVE;
+    const statusFilter = statusFilterParam.toLowerCase();
 
-    // Build query
+    // Build query with case-insensitive status matching
     const filter = {};
     if (topicId) {
       if (!mongoose.Types.ObjectId.isValid(topicId)) {
@@ -33,7 +34,7 @@ export async function GET(request) {
       filter.topicId = topicId;
     }
     if (statusFilter !== "all") {
-      filter.status = statusFilter;
+      filter.status = { $regex: new RegExp(`^${statusFilter}$`, "i") };
     }
 
     // Get total count

@@ -9,79 +9,151 @@ import { logger } from "@/utils/logger";
 // Create slug utility function for use in this file (local variable)
 const createSlugLocal = createSlugUtil;
 
+// Helper to get base URL for server-side requests
+const getBaseUrl = () => {
+  if (typeof window !== "undefined") {
+    // Client-side: use relative URL
+    return "";
+  }
+  // Server-side: use absolute URL from environment or default to localhost
+  return process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || 
+         process.env.NEXT_PUBLIC_APP_URL || 
+         "http://localhost:3000";
+};
+
 // Fetch all active exams (with pagination support)
 export const fetchExams = async (options = {}) => {
   try {
     const { page = 1, limit = 100, status = STATUS.ACTIVE } = options;
-    const response = await api.get(
-      `/exam?page=${page}&limit=${limit}&status=${status}`
-    );
-
-    if (response.data.success) {
-      // Handle paginated response
-      if (response.data.pagination) {
-        return response.data.data || [];
+    
+    // Check if we're on server side
+    const isServer = typeof window === "undefined";
+    const baseUrl = getBaseUrl();
+    const url = `${baseUrl}/api/exam?page=${page}&limit=${limit}&status=${status}`;
+    
+    // Use fetch for server-side, axios for client-side
+    if (isServer) {
+      const response = await fetch(url, {
+        next: { revalidate: 60 }, // Cache for 60 seconds
+      });
+      
+      if (!response.ok) {
+        return [];
       }
-      // Handle legacy response format
-      return (response.data.data || []).filter(
-        (exam) => exam.status === STATUS.ACTIVE
+      
+      const data = await response.json();
+      if (data.success && data.data) {
+        // API already filters by status correctly, so return all data
+        // Only do a safety check to ensure we have valid exams with names
+        const exams = data.data || [];
+        return exams.filter((exam) => exam && exam.name);
+      }
+      return [];
+    } else {
+      // Client-side: use axios
+      const response = await api.get(
+        `/exam?page=${page}&limit=${limit}&status=${status}`
       );
+
+      if (response.data.success && response.data.data) {
+        // API already filters by status correctly, so return all data
+        // Only do a safety check to ensure we have valid exams with names
+        const exams = response.data.data || [];
+        return exams.filter((exam) => exam && exam.name);
+      }
+      return [];
     }
-    return [];
   } catch (error) {
     logger.error("Error fetching exams:", error);
     return [];
   }
 };
 
-// Fetch exam by ID or name
+// Fetch exam by ID or name/slug
 export const fetchExamById = async (examId) => {
   if (!examId) return null;
 
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
   try {
-    // Try by ID first
-    const response = await api.get(`/exam/${examId}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
-    }
-  } catch (error) {
-    // If not found by ID (400/404), try fetching all and finding by name
-    if (error.response?.status === 400 || error.response?.status === 404) {
-      try {
-        const exams = await fetchExams({ limit: 100 });
-        const examIdLower = examId?.toLowerCase();
-        const found = exams.find(
-          (exam) =>
-            exam._id === examId ||
-            exam.name?.toLowerCase() === examIdLower ||
-            createSlugLocal(exam.name) === examIdLower
-        );
-
-        // If found by slug, fetch the full exam data by its actual ID to get all fields including content
-        if (found && found._id) {
-          try {
-            const fullResponse = await api.get(`/exam/${found._id}`);
-            if (fullResponse.data.success && fullResponse.data.data) {
-              return fullResponse.data.data;
+    // Try by ID first (only if it looks like an ObjectId)
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(examId);
+    if (isObjectId) {
+      if (isServer) {
+        // Server-side: use fetch
+        try {
+          const response = await fetch(`${baseUrl}/api/exam/${examId}`, {
+            next: { revalidate: 60 },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
             }
-          } catch (fullErr) {
-            // If full fetch fails, return the found exam (might not have all fields)
-            // Silently fail - return partial data
-            return found;
           }
+        } catch (err) {
+          // Continue to fallback
         }
-
-        return found || null;
-      } catch (err) {
-        // Silently fail - return null
-        return null;
+      } else {
+        // Client-side: use axios
+        try {
+          const response = await api.get(`/exam/${examId}`);
+          if (response.data.success && response.data.data) {
+            return response.data.data;
+          }
+        } catch (error) {
+          // Continue to fallback
+        }
       }
     }
-    // For other errors, return null
-    return null;
+  } catch (error) {
+    // Continue to fallback
   }
 
-  return null;
+  // Fallback: fetch all exams and find by slug
+  try {
+    const exams = await fetchExams({ limit: 100 });
+    const examIdLower = examId?.toLowerCase();
+    const found = exams.find(
+      (exam) =>
+        exam._id === examId ||
+        exam.name?.toLowerCase() === examIdLower ||
+        createSlugLocal(exam.name) === examIdLower
+    );
+
+    // If found by slug, fetch the full exam data by its actual ID
+    if (found && found._id) {
+      try {
+        if (isServer) {
+          const response = await fetch(`${baseUrl}/api/exam/${found._id}`, {
+            next: { revalidate: 60 },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data) {
+              return data.data;
+            }
+          }
+          return found;
+        } else {
+          const fullResponse = await api.get(`/exam/${found._id}`);
+          if (fullResponse.data.success && fullResponse.data.data) {
+            return fullResponse.data.data;
+          }
+          return found;
+        }
+      } catch (fullErr) {
+        return found;
+      }
+    }
+
+    return found || null;
+  } catch (err) {
+    logger.warn("Error fetching exam by slug:", err.message);
+    return null;
+  }
 };
 
 // Fetch subjects by exam ID (optimized with pagination)
@@ -100,11 +172,16 @@ export const fetchSubjectsByExam = async (examId, options = {}) => {
       // Handle legacy response format
       const allSubjects = response.data.data || [];
       const filteredSubjects = allSubjects.filter(
-        (subject) =>
-          (subject.examId?._id === examId ||
+        (subject) => {
+          const matchesExam =
+            subject.examId?._id === examId ||
             subject.examId === examId ||
-            subject.examId?.name?.toLowerCase() === examId?.toLowerCase()) &&
-          subject.status === STATUS.ACTIVE
+            subject.examId?.name?.toLowerCase() === examId?.toLowerCase();
+          const matchesStatus = subject.status
+            ? subject.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
+            : false;
+          return matchesExam && matchesStatus;
+        }
       );
       // Sort by orderNumber
       return filteredSubjects.sort(
@@ -170,7 +247,9 @@ export const fetchUnitsBySubject = async (subjectId, examId, options = {}) => {
       }
       // Handle legacy response format
       const filteredUnits = (response.data.data || []).filter(
-        (unit) => unit.status === STATUS.ACTIVE
+        (unit) =>
+          unit.status &&
+          unit.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
       );
       // Sort by orderNumber
       return filteredUnits.sort(
@@ -199,7 +278,9 @@ export const fetchChaptersByUnit = async (unitId, options = {}) => {
       }
       // Handle legacy response format
       const filteredChapters = (response.data.data || []).filter(
-        (chapter) => chapter.status === STATUS.ACTIVE
+        (chapter) =>
+          chapter.status &&
+          chapter.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
       );
       // Sort by orderNumber
       return filteredChapters.sort(
@@ -222,9 +303,11 @@ export const fetchChaptersBySubject = async (subjectId, examId) => {
     }
     const response = await api.get(url);
     if (response.data.success) {
-      // Filter only active chapters
+      // Filter only active chapters (case-insensitive)
       return response.data.data.filter(
-        (chapter) => chapter.status === "active"
+        (chapter) =>
+          chapter.status &&
+          chapter.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
       );
     }
     return [];
@@ -342,7 +425,9 @@ export const fetchTopicsByChapter = async (chapterId, options = {}) => {
       }
       // Handle legacy response format
       const filteredTopics = (response.data.data || []).filter(
-        (topic) => topic.status === STATUS.ACTIVE
+        (topic) =>
+          topic.status &&
+          topic.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
       );
       // Sort by orderNumber
       return filteredTopics.sort(
@@ -406,7 +491,9 @@ export const fetchSubTopicsByTopic = async (topicId, options = {}) => {
       }
       // Handle legacy response format
       const filteredSubTopics = (response.data.data || []).filter(
-        (sub) => sub.status === STATUS.ACTIVE
+        (sub) =>
+          sub.status &&
+          sub.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
       );
       // Sort by orderNumber
       return filteredSubTopics.sort(

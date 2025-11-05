@@ -84,10 +84,14 @@ const Navbar = () => {
             <div className="flex items-center shrink-0">
               <Image
                 src="/logo.png"
-                alt="logo"
+                alt="TestPrepKart Logo"
                 width={150}
                 height={150}
                 className="w-24 sm:w-28 md:w-32 lg:w-36 h-auto"
+                priority
+                loading="eager"
+                placeholder="blur"
+                blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PC9zdmc+"
               />
             </div>
 
