@@ -1,36 +1,34 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import SubTopic from "@/models/SubTopic";
+import mongoose from "mongoose";
+import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
+import { ERROR_MESSAGES } from "@/constants";
 
 export async function GET(request, { params }) {
   try {
     await connectDB();
     const { id } = await params;
 
-    const subTopic = await SubTopic.findById(id)
-      .populate("examId", "name")
-      .populate("subjectId", "name")
-      .populate("unitId", "name")
-      .populate("chapterId", "name")
-      .populate("topicId", "name");
-
-    if (!subTopic) {
-      return NextResponse.json(
-        { success: false, message: "SubTopic not found" },
-        { status: 404 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subtopic ID", 400);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: subTopic,
-    });
+    const subTopic = await SubTopic.findById(id)
+      .populate("examId", "name status")
+      .populate("subjectId", "name")
+      .populate("unitId", "name orderNumber")
+      .populate("chapterId", "name orderNumber")
+      .populate("topicId", "name orderNumber")
+      .lean();
+
+    if (!subTopic) {
+      return notFoundResponse(ERROR_MESSAGES.SUBTOPIC_NOT_FOUND);
+    }
+
+    return successResponse(subTopic);
   } catch (error) {
-    console.error("❌ Error fetching subtopic:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch subtopic" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -40,65 +38,61 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    const {
-      name,
-      examId,
-      subjectId,
-      unitId,
-      chapterId,
-      topicId,
-      orderNumber,
-      content,
-      title,
-      metaDescription,
-      keywords,
-    } = body;
-
-    // Capitalize first letter of each word in subtopic name
-    const subTopicName = name
-      ? name.trim().replace(/\b\w/g, (l) => l.toUpperCase())
-      : "";
-
-    const updateData = {
-      name: subTopicName,
-      examId,
-      subjectId,
-      unitId,
-      chapterId,
-      topicId,
-      orderNumber,
-      content,
-      title,
-      metaDescription,
-      keywords,
-    };
-
-    const updatedSubTopic = await SubTopic.findByIdAndUpdate(id, updateData, {
-      new: true,
-    })
-      .populate("examId", "name")
-      .populate("subjectId", "name")
-      .populate("unitId", "name")
-      .populate("chapterId", "name")
-      .populate("topicId", "name");
-
-    if (!updatedSubTopic) {
-      return NextResponse.json(
-        { success: false, message: "SubTopic not found" },
-        { status: 404 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subtopic ID", 400);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: updatedSubTopic,
-    });
+    const { name, examId, subjectId, unitId, chapterId, topicId, orderNumber, status, content, title, metaDescription, keywords } = body;
+
+    // Validate required fields
+    if (!name || name.trim() === "") {
+      return errorResponse("SubTopic name is required", 400);
+    }
+
+    // Check if subtopic exists
+    const existingSubTopic = await SubTopic.findById(id);
+    if (!existingSubTopic) {
+      return notFoundResponse(ERROR_MESSAGES.SUBTOPIC_NOT_FOUND);
+    }
+
+    // Capitalize first letter of each word in subtopic name
+    const subTopicName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
+
+    // Prepare update data
+    const updateData = {
+      name: subTopicName,
+      content: content || "",
+      title: title || "",
+      metaDescription: metaDescription || "",
+      keywords: keywords || "",
+    };
+
+    if (examId) updateData.examId = examId;
+    if (subjectId) updateData.subjectId = subjectId;
+    if (unitId) updateData.unitId = unitId;
+    if (chapterId) updateData.chapterId = chapterId;
+    if (topicId) updateData.topicId = topicId;
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (status) updateData.status = status;
+
+    const updatedSubTopic = await SubTopic.findByIdAndUpdate(id, { $set: updateData }, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("examId", "name status")
+      .populate("subjectId", "name")
+      .populate("unitId", "name orderNumber")
+      .populate("chapterId", "name orderNumber")
+      .populate("topicId", "name orderNumber")
+      .lean();
+
+    if (!updatedSubTopic) {
+      return notFoundResponse(ERROR_MESSAGES.SUBTOPIC_NOT_FOUND);
+    }
+
+    return successResponse(updatedSubTopic, "SubTopic updated successfully");
   } catch (error) {
-    console.error("❌ Error updating subtopic:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update subtopic" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
   }
 }
 
@@ -107,25 +101,18 @@ export async function DELETE(request, { params }) {
     await connectDB();
     const { id } = await params;
 
-    const deletedSubTopic = await SubTopic.findByIdAndDelete(id);
-
-    if (!deletedSubTopic) {
-      return NextResponse.json(
-        { success: false, message: "SubTopic not found" },
-        { status: 404 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subtopic ID", 400);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "SubTopic deleted successfully",
-    });
+    const deletedSubTopic = await SubTopic.findByIdAndDelete(id);
+    if (!deletedSubTopic) {
+      return notFoundResponse(ERROR_MESSAGES.SUBTOPIC_NOT_FOUND);
+    }
+
+    return successResponse(deletedSubTopic, "SubTopic deleted successfully");
   } catch (error) {
-    console.error("❌ Error deleting subtopic:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to delete subtopic" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
   }
 }
 

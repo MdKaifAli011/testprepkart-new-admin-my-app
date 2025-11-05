@@ -150,7 +150,7 @@ const SubTopicPage = () => {
         );
         setCurrentSubTopicIndex(index);
       } catch (err) {
-        console.error("Error loading subtopic data:", err);
+        // Error handled by setError
         setError("Failed to load subtopic data. Please try again later.");
       } finally {
         setIsLoading(false);

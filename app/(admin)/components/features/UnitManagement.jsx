@@ -60,10 +60,11 @@ const UnitsManagement = () => {
     if (!subjectId) return 1;
 
     try {
-      const response = await api.get(`/unit?subjectId=${subjectId}`);
-      if (response.data.success && response.data.data.length > 0) {
+      // Fetch all units for this subject (including inactive) to get correct order number
+      const response = await api.get(`/unit?subjectId=${subjectId}&status=all&limit=1000`);
+      if (response.data.success && response.data.data && response.data.data.length > 0) {
         const maxOrder = Math.max(
-          ...response.data.data.map((unit) => unit.orderNumber)
+          ...response.data.data.map((unit) => unit.orderNumber || 0)
         );
         return maxOrder + 1;
       }
@@ -100,14 +101,15 @@ const UnitsManagement = () => {
     getNextOrderNumber,
   ]);
 
-  // Fetch units from API using Axios
+  // Fetch units from API using Axios (fetch all units for admin management)
   const fetchUnits = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     try {
       setIsDataLoading(true);
       setError(null);
-      const response = await api.get("/unit");
+      // Fetch all units including inactive ones for admin management
+      const response = await api.get("/unit?status=all&limit=1000");
 
       if (response.data.success) {
         setUnits(response.data.data || []);

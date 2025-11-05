@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, Suspense, lazy } from "react";
 import Link from "next/link";
 import {
   FaTrophy,
@@ -12,10 +12,15 @@ import {
   FaSyringe,
   FaUniversity,
   FaLightbulb,
+  FaSpinner,
 } from "react-icons/fa";
 import Navbar from "./layout/Navbar";
 import Footer from "./layout/Footer";
 import { fetchExams, createSlug } from "./lib/api";
+import { ERROR_MESSAGES, PLACEHOLDERS, SEO_DEFAULTS } from "@/constants";
+
+// Lazy load components
+const ExamCard = lazy(() => import("./components/ExamCard"));
 
 // Default exam icons and styling
 const getExamIcon = (examName) => {
@@ -111,24 +116,43 @@ const getDefaultServices = (examName) => {
 const HomePage = () => {
   const [exams, setExams] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Memoize exam data to prevent unnecessary re-renders
+  const memoizedExams = useMemo(() => exams, [exams]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadExams = async () => {
       try {
         setIsLoading(true);
-        const fetchedExams = await fetchExams();
-        setExams(fetchedExams);
-      } catch (error) {
-        console.error("Error loading exams:", error);
+        setError(null);
+        const fetchedExams = await fetchExams({ limit: 100 });
+        if (isMounted) {
+          setExams(fetchedExams);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(ERROR_MESSAGES.FETCH_FAILED);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
+
     loadExams();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
   return (
     <>
-    <Navbar />
+      <Navbar />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-purple-50 via-purple-50/50 to-white py-12 md:py-20 lg:py-28">
@@ -261,61 +285,28 @@ const HomePage = () => {
                 />
               ))}
             </div>
-          ) : exams.length > 0 ? (
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg inline-block">
+                {error}
+              </div>
+            </div>
+          ) : memoizedExams.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {exams.map((exam) => {
-                const style = getExamStyle(exam.name);
-                const services = getDefaultServices(exam.name);
-                const examSlug = createSlug(exam.name);
-
-                return (
-                  <div
-                    key={exam._id}
-                    className={`bg-gradient-to-br ${style.gradient} rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1`}
-                  >
-                    {/* Image Section */}
-                    <div
-                      className={`${style.bgColor} h-48 flex items-center justify-center relative`}
-                    >
-                      <div className="absolute inset-0 bg-white/20"></div>
-                      <div className="relative z-10">{getExamIcon(exam.name)}</div>
-                    </div>
-
-                    {/* Content Section */}
-                    <div className="p-6 bg-white">
-                      <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4">
-                        {exam.name} Exam Preparation
-                      </h3>
-
-                      {/* Services List */}
-                      <ul className="space-y-2 mb-4">
-                        {services.map((service, serviceIndex) => (
-                          <li
-                            key={serviceIndex}
-                            className="flex items-start gap-2 text-sm text-gray-700"
-                          >
-                            <FaFlag className="text-purple-600 text-xs mt-1 shrink-0" />
-                            <span>{service}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* Visit Website Link */}
-                      <Link
-                        href={`/${examSlug}`}
-                        className="flex items-center justify-end gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors mt-6"
-                      >
-                        <span>Visit Website</span>
-                        <FaArrowRight className="text-xs" />
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+              {memoizedExams.map((exam) => (
+                <Suspense
+                  key={exam._id}
+                  fallback={
+                    <div className="bg-gray-200 animate-pulse rounded-xl h-96" />
+                  }
+                >
+                  <ExamCard exam={exam} />
+                </Suspense>
+              ))}
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
-              <p>No exams available at the moment.</p>
+              <p>{PLACEHOLDERS.NO_DATA}</p>
             </div>
           )}
         </div>

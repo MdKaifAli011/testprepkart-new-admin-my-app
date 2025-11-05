@@ -1,37 +1,34 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Topic from "@/models/Topic";
-// Import child model to ensure it's registered before middleware runs
 import SubTopic from "@/models/SubTopic";
+import mongoose from "mongoose";
+import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
+import { ERROR_MESSAGES } from "@/constants";
 
 export async function GET(request, { params }) {
   try {
     await connectDB();
     const { id } = await params;
 
-    const topic = await Topic.findById(id)
-      .populate("examId", "name")
-      .populate("subjectId", "name")
-      .populate("unitId", "name")
-      .populate("chapterId", "name");
-
-    if (!topic) {
-      return NextResponse.json(
-        { success: false, message: "Topic not found" },
-        { status: 404 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid topic ID", 400);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: topic,
-    });
+    const topic = await Topic.findById(id)
+      .populate("examId", "name status")
+      .populate("subjectId", "name")
+      .populate("unitId", "name orderNumber")
+      .populate("chapterId", "name orderNumber")
+      .lean();
+
+    if (!topic) {
+      return notFoundResponse(ERROR_MESSAGES.TOPIC_NOT_FOUND);
+    }
+
+    return successResponse(topic);
   } catch (error) {
-    console.error("❌ Error fetching topic:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch topic" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -41,62 +38,59 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    const {
-      name,
-      examId,
-      subjectId,
-      unitId,
-      chapterId,
-      orderNumber,
-      content,
-      title,
-      metaDescription,
-      keywords,
-    } = body;
-
-    // Capitalize first letter of each word in topic name
-    const topicName = name
-      ? name.trim().replace(/\b\w/g, (l) => l.toUpperCase())
-      : "";
-
-    const updateData = {
-      name: topicName,
-      examId,
-      subjectId,
-      unitId,
-      chapterId,
-      orderNumber,
-      content,
-      title: title || "",
-      metaDescription,
-      keywords,
-    };
-
-    const updatedTopic = await Topic.findByIdAndUpdate(id, updateData, {
-      new: true,
-    })
-      .populate("examId", "name")
-      .populate("subjectId", "name")
-      .populate("unitId", "name")
-      .populate("chapterId", "name");
-
-    if (!updatedTopic) {
-      return NextResponse.json(
-        { success: false, message: "Topic not found" },
-        { status: 404 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid topic ID", 400);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: updatedTopic,
-    });
+    const { name, examId, subjectId, unitId, chapterId, orderNumber, status, content, title, metaDescription, keywords } = body;
+
+    // Validate required fields
+    if (!name || name.trim() === "") {
+      return errorResponse("Topic name is required", 400);
+    }
+
+    // Check if topic exists
+    const existingTopic = await Topic.findById(id);
+    if (!existingTopic) {
+      return notFoundResponse(ERROR_MESSAGES.TOPIC_NOT_FOUND);
+    }
+
+    // Capitalize first letter of each word in topic name
+    const topicName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
+
+    // Prepare update data
+    const updateData = {
+      name: topicName,
+      content: content || "",
+      title: title || "",
+      metaDescription: metaDescription || "",
+      keywords: keywords || "",
+    };
+
+    if (examId) updateData.examId = examId;
+    if (subjectId) updateData.subjectId = subjectId;
+    if (unitId) updateData.unitId = unitId;
+    if (chapterId) updateData.chapterId = chapterId;
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (status) updateData.status = status;
+
+    const updatedTopic = await Topic.findByIdAndUpdate(id, { $set: updateData }, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("examId", "name status")
+      .populate("subjectId", "name")
+      .populate("unitId", "name orderNumber")
+      .populate("chapterId", "name orderNumber")
+      .lean();
+
+    if (!updatedTopic) {
+      return notFoundResponse(ERROR_MESSAGES.TOPIC_NOT_FOUND);
+    }
+
+    return successResponse(updatedTopic, "Topic updated successfully");
   } catch (error) {
-    console.error("❌ Error updating topic:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update topic" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
   }
 }
 
@@ -105,25 +99,18 @@ export async function DELETE(request, { params }) {
     await connectDB();
     const { id } = await params;
 
-    const deletedTopic = await Topic.findByIdAndDelete(id);
-
-    if (!deletedTopic) {
-      return NextResponse.json(
-        { success: false, message: "Topic not found" },
-        { status: 404 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid topic ID", 400);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Topic deleted successfully",
-    });
+    const deletedTopic = await Topic.findByIdAndDelete(id);
+    if (!deletedTopic) {
+      return notFoundResponse(ERROR_MESSAGES.TOPIC_NOT_FOUND);
+    }
+
+    return successResponse(deletedTopic, "Topic deleted successfully");
   } catch (error) {
-    console.error("❌ Error deleting topic:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to delete topic" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
   }
 }
 

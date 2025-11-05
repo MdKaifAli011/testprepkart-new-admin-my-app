@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import MainLayout from "../../../layout/MainLayout";
-import { useParams, notFound, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FaBook,
@@ -48,7 +48,7 @@ const UnitPage = () => {
         // Fetch exam
         const fetchedExam = await fetchExamById(examId);
         if (!fetchedExam) {
-          notFound();
+          setError("Exam not found");
           return;
         }
         setExam(fetchedExam);
@@ -60,7 +60,7 @@ const UnitPage = () => {
         // Find subject by slug
         const foundSubject = findByIdOrSlug(fetchedSubjects, subjectSlug);
         if (!foundSubject) {
-          notFound();
+          setError("Subject not found");
           return;
         }
         
@@ -77,7 +77,7 @@ const UnitPage = () => {
         // Find unit by slug
         const foundUnit = findByIdOrSlug(fetchedUnits, unitSlug);
         if (!foundUnit) {
-          notFound();
+          setError("Unit not found");
           return;
         }
         
@@ -89,7 +89,7 @@ const UnitPage = () => {
         const fetchedChapters = await fetchChaptersByUnit(foundUnit._id);
         setChapters(fetchedChapters);
       } catch (err) {
-        console.error("Error loading unit data:", err);
+        // Error handled by setError
         setError("Failed to load unit data. Please try again later.");
       } finally {
         setIsLoading(false);

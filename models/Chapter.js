@@ -32,20 +32,24 @@ const chapterSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
+    // content fields
     content: {
       type: String,
       default: "",
     },
+    // seo title
     title: {
       type: String,
       trim: true,
       default: "",
     },
+    // seo description
     metaDescription: {
       type: String,
       trim: true,
       default: "",
     },
+    // seo keywords
     keywords: {
       type: String,
       trim: true,

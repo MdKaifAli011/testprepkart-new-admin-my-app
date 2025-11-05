@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState, useEffect } from "react";
 import MainLayout from "../../layout/MainLayout";
-import { useParams, notFound, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FaBook,
@@ -45,7 +45,7 @@ const SubjectPage = () => {
         // Fetch exam
         const fetchedExam = await fetchExamById(examId);
         if (!fetchedExam) {
-          notFound();
+          setError("Exam not found");
           return;
         }
         setExam(fetchedExam);
@@ -57,7 +57,7 @@ const SubjectPage = () => {
         // Find subject by slug
         const foundSubject = findByIdOrSlug(fetchedSubjects, subjectSlug);
         if (!foundSubject) {
-          notFound();
+          setError("Subject not found");
           return;
         }
         
@@ -72,7 +72,6 @@ const SubjectPage = () => {
         );
         setUnits(fetchedUnits);
       } catch (err) {
-        console.error("Error loading subject data:", err);
         setError("Failed to load subject data. Please try again later.");
       } finally {
         setIsLoading(false);

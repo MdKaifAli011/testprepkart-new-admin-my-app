@@ -37,10 +37,24 @@ const topicSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-    content: { type: String, default: "" },
-    title: { type: String, trim: true, default: "" },
-    metaDescription: { type: String, trim: true, default: "" },
-    keywords: { type: String, trim: true, default: "" },
+        // seo title
+        title: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+        // seo description
+        metaDescription: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+        // seo keywords
+        keywords: {
+          type: String,
+          trim: true,
+          default: "",
+        },
   },
   { timestamps: true }
 );

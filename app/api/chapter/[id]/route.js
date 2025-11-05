@@ -1,79 +1,62 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Chapter from "@/models/Chapter";
-// Import all child models to ensure they're registered before middleware runs
 import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
+import mongoose from "mongoose";
+import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
+import { ERROR_MESSAGES } from "@/constants";
 
 export async function GET(request, { params }) {
   try {
     await connectDB();
-
     const { id } = await params;
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: "Chapter ID is required" },
-        { status: 400 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid chapter ID", 400);
     }
 
     const chapter = await Chapter.findById(id)
-      .populate("examId", "name")
+      .populate("examId", "name status")
       .populate("subjectId", "name")
-      .populate("unitId", "name");
+      .populate("unitId", "name orderNumber")
+      .lean();
 
     if (!chapter) {
-      return NextResponse.json(
-        { success: false, message: "Chapter not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.CHAPTER_NOT_FOUND);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: chapter,
-    });
+    return successResponse(chapter);
   } catch (error) {
-    console.error("Error fetching chapter:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch chapter" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
 export async function PUT(request, { params }) {
   try {
     await connectDB();
-
     const { id } = await params;
     const body = await request.json();
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: "Chapter ID is required" },
-        { status: 400 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid chapter ID", 400);
     }
 
-    // Extract fields from request body
-    const {
-      name,
-      examId,
-      subjectId,
-      unitId,
-      orderNumber,
-      content,
-      title,
-      metaDescription,
-      keywords,
-    } = body;
+    const { name, examId, subjectId, unitId, orderNumber, status, content, title, metaDescription, keywords } = body;
+
+    // Validate required fields
+    if (!name || name.trim() === "") {
+      return errorResponse("Chapter name is required", 400);
+    }
+
+    // Check if chapter exists
+    const existingChapter = await Chapter.findById(id);
+    if (!existingChapter) {
+      return notFoundResponse(ERROR_MESSAGES.CHAPTER_NOT_FOUND);
+    }
 
     // Capitalize first letter of each word in chapter name
-    const chapterName = name
-      ? name.trim().replace(/\b\w/g, (l) => l.toUpperCase())
-      : "";
+    const chapterName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
 
     // Prepare update data
     const updateData = {
@@ -84,74 +67,48 @@ export async function PUT(request, { params }) {
       keywords: keywords || "",
     };
 
-    // Only update these fields if they are provided
     if (examId) updateData.examId = examId;
     if (subjectId) updateData.subjectId = subjectId;
     if (unitId) updateData.unitId = unitId;
     if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (status) updateData.status = status;
 
-    const updatedChapter = await Chapter.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    )
-      .populate("examId", "name")
+    const updatedChapter = await Chapter.findByIdAndUpdate(id, { $set: updateData }, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("examId", "name status")
       .populate("subjectId", "name")
-      .populate("unitId", "name");
+      .populate("unitId", "name orderNumber")
+      .lean();
 
     if (!updatedChapter) {
-      return NextResponse.json(
-        { success: false, message: "Chapter not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.CHAPTER_NOT_FOUND);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: updatedChapter,
-      message: "Chapter updated successfully",
-    });
+    return successResponse(updatedChapter, "Chapter updated successfully");
   } catch (error) {
-    console.error("Error updating chapter:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update chapter" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
   }
 }
 
 export async function DELETE(request, { params }) {
   try {
     await connectDB();
-
     const { id } = await params;
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: "Chapter ID is required" },
-        { status: 400 }
-      );
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid chapter ID", 400);
     }
 
     const deletedChapter = await Chapter.findByIdAndDelete(id);
-
     if (!deletedChapter) {
-      return NextResponse.json(
-        { success: false, message: "Chapter not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.CHAPTER_NOT_FOUND);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Chapter deleted successfully",
-    });
+    return successResponse(deletedChapter, "Chapter deleted successfully");
   } catch (error) {
-    console.error("Error deleting chapter:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to delete chapter" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
   }
 }
 

@@ -1,25 +1,39 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Exam from "@/models/Exam";
+import { parsePagination, createPaginationResponse } from "@/utils/pagination";
+import { successResponse, errorResponse, handleApiError } from "@/utils/apiResponse";
+import { STATUS, ERROR_MESSAGES } from "@/constants";
 
-// ✅ GET: Fetch all exams
-export async function GET() {
+// ✅ GET: Fetch all exams with pagination
+export async function GET(request) {
   try {
     await connectDB();
+    const { searchParams } = new URL(request.url);
+    
+    // Parse pagination
+    const { page, limit, skip } = parsePagination(searchParams);
+    
+    // Get status filter (default to active for public, all for admin)
+    const statusFilter = searchParams.get("status") || STATUS.ACTIVE;
+    const filter = statusFilter === "all" ? {} : { status: statusFilter };
+    
+    // Get total count
+    const total = await Exam.countDocuments(filter);
+    
+    // Fetch exams with pagination
+    const exams = await Exam.find(filter)
+      .sort({ orderNumber: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select("name status orderNumber createdAt")
+      .lean();
 
-    const exams = await Exam.find().sort({ createdAt: -1 });
-
-    return NextResponse.json({
-      success: true,
-      count: exams.length,
-      data: exams,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching exams:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to fetch exams" },
-      { status: 500 }
+      createPaginationResponse(exams, total, page, limit)
     );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -31,52 +45,28 @@ export async function POST(request) {
 
     // Validate required fields
     if (!body.name || body.name.trim() === "") {
-      return NextResponse.json(
-        { success: false, message: "Exam name is required" },
-        { status: 400 }
-      );
+      return errorResponse("Exam name is required", 400);
     }
 
     // Capitalize exam name
     const examName = body.name.trim().toUpperCase();
 
     // Check for duplicate exam name
-    const existingExam = await Exam.findOne({
-      name: examName,
-    });
-
+    const existingExam = await Exam.findOne({ name: examName });
     if (existingExam) {
-      return NextResponse.json(
-        { success: false, message: "Exam with this name already exists" },
-        { status: 409 }
-      );
+      return errorResponse("Exam with this name already exists", 409);
     }
 
     // Create new exam
     const newExam = await Exam.create({
       name: examName,
-      status: body.status || "active",
+      status: body.status || STATUS.ACTIVE,
+      orderNumber: body.orderNumber || 1,
     });
 
-    return NextResponse.json(
-      { success: true, message: "Exam created successfully", data: newExam },
-      { status: 201 }
-    );
+    return successResponse(newExam, "Exam created successfully", 201);
   } catch (error) {
-    console.error("❌ Error creating exam:", error);
-
-    // Handle Mongoose validation errors
-    if (error.name === "ValidationError") {
-      return NextResponse.json(
-        { success: false, message: "Validation error", errors: error.errors },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, message: "Failed to create exam" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.SAVE_FAILED);
   }
 }
 

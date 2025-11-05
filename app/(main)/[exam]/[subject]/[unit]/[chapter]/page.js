@@ -104,7 +104,7 @@ const ChapterPage = () => {
         const fetchedTopics = await fetchTopicsByChapter(foundChapter._id);
         setTopics(fetchedTopics);
       } catch (err) {
-        console.error("Error loading chapter data:", err);
+        // Error handled by setError
         setError("Failed to load chapter data. Please try again later.");
       } finally {
         setIsLoading(false);

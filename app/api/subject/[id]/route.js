@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Subject from "@/models/Subject";
-// Import all child models to ensure they're registered before middleware runs
 import Unit from "@/models/Unit";
 import Chapter from "@/models/Chapter";
 import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  notFoundResponse,
+} from "@/utils/apiResponse";
+import { ERROR_MESSAGES } from "@/constants";
 
 // ---------- GET SINGLE SUBJECT ----------
 export async function GET(_request, { params }) {
@@ -15,30 +21,20 @@ export async function GET(_request, { params }) {
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid subject ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid subject ID", 400);
     }
 
-    const subject = await Subject.findById(id).populate(
-      "examId",
-      "name status"
-    );
+    const subject = await Subject.findById(id)
+      .populate("examId", "name status")
+      .lean();
+
     if (!subject) {
-      return NextResponse.json(
-        { success: false, message: "Subject not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.SUBJECT_NOT_FOUND);
     }
 
-    return NextResponse.json({ success: true, data: subject });
+    return successResponse(subject);
   } catch (error) {
-    console.error("❌ Error fetching subject:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch subject" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -50,17 +46,14 @@ export async function PUT(request, { params }) {
     const body = await request.json();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid subject ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid subject ID", 400);
     }
 
-    // Extract all possible fields from the request body
     const {
       name,
       examId,
       orderNumber,
+      status,
       content,
       title,
       metaDescription,
@@ -68,32 +61,30 @@ export async function PUT(request, { params }) {
     } = body;
 
     // Validate required fields
-    if (!name) {
-      return NextResponse.json(
-        { success: false, message: "Subject name is required" },
-        { status: 400 }
-      );
+    if (!name || name.trim() === "") {
+      return errorResponse("Subject name is required", 400);
+    }
+
+    // Check if subject exists
+    const existingSubject = await Subject.findById(id);
+    if (!existingSubject) {
+      return notFoundResponse(ERROR_MESSAGES.SUBJECT_NOT_FOUND);
     }
 
     // Capitalize first letter of each word in subject name
     const subjectName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
 
-    // Check for duplicate name if name is being updated
-    if (name) {
-      const duplicate = await Subject.findOne({
-        name: subjectName,
-        _id: { $ne: id },
-        ...(examId && { examId }),
-      });
-      if (duplicate) {
-        return NextResponse.json(
-          { success: false, message: "Subject with same name already exists" },
-          { status: 409 }
-        );
-      }
+    // Check for duplicate name
+    const duplicate = await Subject.findOne({
+      name: subjectName,
+      _id: { $ne: id },
+      ...(examId && { examId }),
+    });
+    if (duplicate) {
+      return errorResponse("Subject with same name already exists", 409);
     }
 
-    // Prepare update data - always include all fields to ensure they're saved
+    // Prepare update data
     const updateData = {
       name: subjectName,
       content: content || "",
@@ -102,12 +93,49 @@ export async function PUT(request, { params }) {
       keywords: keywords || "",
     };
 
-    // Only update fields if provided
-    if (examId) {
-      updateData.examId = examId;
+    if (examId) updateData.examId = examId;
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (status) updateData.status = status;
+
+    const updated = await Subject.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
+      .populate("examId", "name status")
+      .lean();
+
+    if (!updated) {
+      return notFoundResponse(ERROR_MESSAGES.SUBJECT_NOT_FOUND);
     }
-    if (orderNumber !== undefined) {
-      updateData.orderNumber = orderNumber;
+
+    return successResponse(updated, "Subject updated successfully");
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
+  }
+}
+
+// ---------- PATCH SUBJECT (Reorder/Status) ----------
+export async function PATCH(request, { params }) {
+  try {
+    await connectDB();
+    const { id } = await params;
+    const body = await request.json();
+    const { orderNumber, status } = body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subject ID", 400);
+    }
+
+    const updateData = {};
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (status) updateData.status = status;
+
+    if (Object.keys(updateData).length === 0) {
+      return errorResponse("No valid update fields provided", 400);
     }
 
     const updated = await Subject.findByIdAndUpdate(
@@ -115,84 +143,19 @@ export async function PUT(request, { params }) {
       { $set: updateData },
       {
         new: true,
-        upsert: false,
         runValidators: true,
       }
-    );
+    )
+      .populate("examId", "name status")
+      .lean();
 
     if (!updated) {
-      return NextResponse.json(
-        { success: false, message: "Subject not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.SUBJECT_NOT_FOUND);
     }
 
-    // Populate the exam data before returning
-    const populatedSubject = await Subject.findById(updated._id).populate(
-      "examId",
-      "name status"
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: "Subject updated successfully",
-      data: populatedSubject,
-    });
+    return successResponse(updated, "Subject updated successfully");
   } catch (error) {
-    console.error("Error updating subject:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update subject" },
-      { status: 500 }
-    );
-  }
-}
-
-// ---------- PATCH SUBJECT (Reorder) ----------
-export async function PATCH(request, { params }) {
-  try {
-    await connectDB();
-    const { id } = await params;
-    const body = await request.json();
-    const { orderNumber } = body;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid subject ID" },
-        { status: 400 }
-      );
-    }
-
-    if (orderNumber === undefined || orderNumber === null) {
-      return NextResponse.json(
-        { success: false, message: "Order number is required" },
-        { status: 400 }
-      );
-    }
-
-    const updated = await Subject.findByIdAndUpdate(
-      id,
-      { orderNumber },
-      { new: true, runValidators: true }
-    ).populate("examId", "name status");
-
-    if (!updated) {
-      return NextResponse.json(
-        { success: false, message: "Subject not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `Subject order updated to ${orderNumber}`,
-      data: updated,
-    });
-  } catch (error) {
-    console.error("Error updating subject order:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update subject order" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to update subject");
   }
 }
 
@@ -203,31 +166,16 @@ export async function DELETE(_request, { params }) {
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid subject ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid subject ID", 400);
     }
 
     const deleted = await Subject.findByIdAndDelete(id);
     if (!deleted) {
-      return NextResponse.json(
-        { success: false, message: "Subject not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.SUBJECT_NOT_FOUND);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Subject deleted successfully",
-      data: deleted,
-    });
+    return successResponse(deleted, "Subject deleted successfully");
   } catch (error) {
-    console.error("Error deleting subject:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to delete subject" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
   }
 }
-

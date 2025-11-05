@@ -140,7 +140,7 @@ const TopicPage = () => {
         const fetchedSubTopics = await fetchSubTopicsByTopic(foundTopic._id);
         setSubTopics(fetchedSubTopics);
       } catch (err) {
-        console.error("Error loading topic data:", err);
+        // Error handled by setError
         setError("Failed to load topic data. Please try again later.");
       } finally {
         setIsLoading(false);

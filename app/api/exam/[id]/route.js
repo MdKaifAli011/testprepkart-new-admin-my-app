@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Exam from "@/models/Exam";
-// Import all models to ensure they're registered before middleware runs
 import Subject from "@/models/Subject";
 import Unit from "@/models/Unit";
 import Chapter from "@/models/Chapter";
 import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
+import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
+import { ERROR_MESSAGES } from "@/constants";
 
 // ---------- GET SINGLE EXAM ----------
 export async function GET(request, { params }) {
@@ -16,32 +17,18 @@ export async function GET(request, { params }) {
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid exam ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid exam ID", 400);
     }
 
-    const exam = await Exam.findById(id);
+    const exam = await Exam.findById(id).lean();
 
     if (!exam) {
-      return NextResponse.json(
-        { success: false, message: "Exam not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.EXAM_NOT_FOUND);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Exam fetched successfully",
-      data: exam,
-    });
+    return successResponse(exam);
   } catch (error) {
-    console.error("Error fetching exam:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch exam" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -53,41 +40,35 @@ export async function PUT(request, { params }) {
     const body = await request.json();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid exam ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid exam ID", 400);
     }
 
-    // Extract all possible fields from the request body
-    const { name, status, content, title, metaDescription, keywords } = body;
+    const { name, status, content, title, metaDescription, keywords, orderNumber } = body;
 
     // Validate required fields
-    if (!name) {
-      return NextResponse.json(
-        { success: false, message: "Exam name is required" },
-        { status: 400 }
-      );
+    if (!name || name.trim() === "") {
+      return errorResponse("Exam name is required", 400);
+    }
+
+    // Check if exam exists
+    const existingExam = await Exam.findById(id);
+    if (!existingExam) {
+      return notFoundResponse(ERROR_MESSAGES.EXAM_NOT_FOUND);
     }
 
     // Capitalize exam name
     const examName = name.trim().toUpperCase();
 
-    // Check for duplicate name if name is being updated
-    if (name) {
-      const duplicate = await Exam.findOne({
-        name: examName,
-        _id: { $ne: id },
-      });
-      if (duplicate) {
-        return NextResponse.json(
-          { success: false, message: "Exam with same name already exists" },
-          { status: 409 }
-        );
-      }
+    // Check for duplicate name
+    const duplicate = await Exam.findOne({
+      name: examName,
+      _id: { $ne: id },
+    });
+    if (duplicate) {
+      return errorResponse("Exam with same name already exists", 409);
     }
 
-    // Prepare update data - always include all fields to ensure they're saved
+    // Prepare update data
     const updateData = {
       name: examName,
       content: content || "",
@@ -96,33 +77,17 @@ export async function PUT(request, { params }) {
       keywords: keywords || "",
     };
 
-    // Only update status if it's provided
-    if (status) {
-      updateData.status = status;
-    }
+    if (status) updateData.status = status;
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
 
-    const updated = await Exam.findByIdAndUpdate(id, updateData, {
+    const updated = await Exam.findByIdAndUpdate(id, { $set: updateData }, {
       new: true,
+      runValidators: true,
     });
 
-    if (!updated) {
-      return NextResponse.json(
-        { success: false, message: "Exam not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Exam updated successfully",
-      data: updated,
-    });
+    return successResponse(updated, "Exam updated successfully");
   } catch (error) {
-    console.error("Error updating exam:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update exam" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
   }
 }
 
@@ -134,68 +99,45 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid exam ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid exam ID", 400);
     }
 
-    const { status } = body;
+    const { status, orderNumber } = body;
 
-    if (!status || !["active", "inactive"].includes(status)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Valid status is required (active or inactive)",
-        },
-        { status: 400 }
-      );
+    if (status && !["active", "inactive"].includes(status)) {
+      return errorResponse("Valid status is required (active or inactive)", 400);
     }
 
-    // Update exam status
-    const updated = await Exam.findByIdAndUpdate(id, { status }, { new: true });
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
 
+    if (Object.keys(updateData).length === 0) {
+      return errorResponse("No valid update fields provided", 400);
+    }
+
+    const updated = await Exam.findByIdAndUpdate(id, { $set: updateData }, { new: true });
     if (!updated) {
-      return NextResponse.json(
-        { success: false, message: "Exam not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.EXAM_NOT_FOUND);
     }
 
-    // Cascading: Update all children status
-    console.log(`🔄 Cascading status update to ${status} for exam ${id}`);
+    // Cascading: Update all children status if status changed
+    if (status) {
+      await Promise.all([
+        SubTopic.updateMany({ examId: id }, { status }),
+        Topic.updateMany({ examId: id }, { status }),
+        Chapter.updateMany({ examId: id }, { status }),
+        Unit.updateMany({ examId: id }, { status }),
+        Subject.updateMany({ examId: id }, { status }),
+      ]);
+    }
 
-    const subTopicsResult = await SubTopic.updateMany(
-      { examId: id },
-      { status }
+    return successResponse(
+      updated,
+      `Exam ${status === "inactive" ? "deactivated" : "updated"} successfully`
     );
-    console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
-
-    const topicsResult = await Topic.updateMany({ examId: id }, { status });
-    console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
-
-    const chaptersResult = await Chapter.updateMany({ examId: id }, { status });
-    console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
-
-    const unitsResult = await Unit.updateMany({ examId: id }, { status });
-    console.log(`✅ Updated ${unitsResult.modifiedCount} Units`);
-
-    const subjectsResult = await Subject.updateMany({ examId: id }, { status });
-    console.log(`✅ Updated ${subjectsResult.modifiedCount} Subjects`);
-
-    return NextResponse.json({
-      success: true,
-      message: `Exam and all children ${
-        status === "inactive" ? "deactivated" : "activated"
-      } successfully`,
-      data: updated,
-    });
   } catch (error) {
-    console.error("Error updating exam status:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to update exam status" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Failed to update exam");
   }
 }
 
@@ -206,32 +148,17 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid exam ID" },
-        { status: 400 }
-      );
+      return errorResponse("Invalid exam ID", 400);
     }
 
     const deleted = await Exam.findByIdAndDelete(id);
-
     if (!deleted) {
-      return NextResponse.json(
-        { success: false, message: "Exam not found" },
-        { status: 404 }
-      );
+      return notFoundResponse(ERROR_MESSAGES.EXAM_NOT_FOUND);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Exam deleted successfully",
-      data: deleted,
-    });
+    return successResponse(deleted, "Exam deleted successfully");
   } catch (error) {
-    console.error("Error deleting exam:", error);
-    return NextResponse.json(
-      { success: false, message: "Failed to delete exam" },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
   }
 }
 

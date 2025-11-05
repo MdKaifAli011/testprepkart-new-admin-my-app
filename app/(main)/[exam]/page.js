@@ -1,70 +1,66 @@
 "use client";
-import React, { useMemo, useState, useEffect } from "react";
-import { useParams, notFound, useRouter } from "next/navigation";
-import Link from "next/link";
+import React, { useState, useMemo, useEffect } from "react";
+import { useParams } from "next/navigation";
 import MainLayout from "../layout/MainLayout";
-import { FaBook, FaGraduationCap } from "react-icons/fa";
+import { FaGraduationCap, FaSpinner } from "react-icons/fa";
 import ListItem from "../components/ListItem";
-import {
-  fetchExamById,
-  fetchSubjectsByExam,
-  createSlug,
-  findByIdOrSlug,
-} from "../lib/api";
+import { fetchExamById, fetchSubjectsByExam, createSlug } from "../lib/api";
+import { useDataFetching } from "../lib/hooks/useDataFetching";
+import { ERROR_MESSAGES, PLACEHOLDERS } from "@/constants";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
 const ExamPage = () => {
   const { exam: examId } = useParams();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState(TABS[0]);
 
-  // Data states
-  const [exam, setExam] = useState(null);
-  const [subjects, setSubjects] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch exam and subjects
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Fetch exam
-        const fetchedExam = await fetchExamById(examId);
-        if (!fetchedExam) {
-          notFound();
-          return;
-        }
-        setExam(fetchedExam);
-
-        // Fetch subjects for this exam
-        const examIdValue = fetchedExam._id || examId;
-        const fetchedSubjects = await fetchSubjectsByExam(examIdValue);
-        // Subjects are already sorted by orderNumber in the API function
-        setSubjects(fetchedSubjects);
-      } catch (err) {
-        console.error("Error loading exam data:", err);
-        setError("Failed to load exam data. Please try again later.");
-      } finally {
-        setIsLoading(false);
+  // Optimized data fetching with caching
+  const {
+    data: exam,
+    isLoading: examLoading,
+    error: examError,
+  } = useDataFetching(
+    async () => {
+      const fetchedExam = await fetchExamById(examId);
+      if (!fetchedExam) {
+        throw new Error(ERROR_MESSAGES.EXAM_NOT_FOUND);
       }
-    };
+      return fetchedExam;
+    },
+    [examId],
+    { cacheKey: `exam-${examId}`, enabled: !!examId }
+  );
 
-    if (examId) {
-      loadData();
-    }
-  }, [examId]);
+  const {
+    data: subjects,
+    isLoading: subjectsLoading,
+    error: subjectsError,
+  } = useDataFetching(
+    async () => {
+      if (!exam?._id) return [];
+      return await fetchSubjectsByExam(exam._id || examId);
+    },
+    [exam?._id, examId],
+    { cacheKey: `subjects-${exam?._id || examId}`, enabled: !!exam }
+  );
+
+  // Memoize exam slug to avoid recalculation - MUST be before any early returns
+  const examSlug = useMemo(() => {
+    return exam ? createSlug(exam.name) : "";
+  }, [exam]);
+
+  const isLoading = examLoading || subjectsLoading;
+  const error = examError || subjectsError;
 
   if (isLoading) {
     return (
       <MainLayout>
         <div className="space-y-8">
-          <div className="animate-pulse">
-            <div className="h-32 bg-gray-200 rounded-xl"></div>
-            <div className="h-64 bg-gray-200 rounded-xl"></div>
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <FaSpinner className="text-indigo-600 text-4xl animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">{PLACEHOLDERS.LOADING}</p>
+            </div>
           </div>
         </div>
       </MainLayout>
@@ -76,14 +72,12 @@ const ExamPage = () => {
       <MainLayout>
         <div className="space-y-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error || "Exam not found"}
+            {error || ERROR_MESSAGES.EXAM_NOT_FOUND}
           </div>
         </div>
       </MainLayout>
     );
   }
-
-  const examSlug = exam ? createSlug(exam.name) : "";
 
   return (
     <MainLayout>
@@ -140,12 +134,22 @@ const ExamPage = () => {
 
           <div className="p-6 text-gray-600">
             {activeTab === "Overview" && (
-              <div
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: exam?.content || "No content available.",
-                }}
-              />
+              <div className="prose prose-sm max-w-none">
+                {exam?.content ? (
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: exam.content,
+                    }}
+                  />
+                ) : (
+                  <div className="text-gray-500 italic">
+                    <p>No content available for this exam.</p>
+                    <p className="text-sm mt-2">
+                      Content can be added from the admin panel.
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
             {activeTab === "Discussion Forum" && (
               <div>Discussion Forum content will appear here...</div>
@@ -169,19 +173,13 @@ const ExamPage = () => {
           </div>
 
           <div className="space-y-3">
-            {subjects.length > 0 ? (
+            {subjects && subjects.length > 0 ? (
               subjects.map((subject, index) => {
                 const subjectSlug = createSlug(subject.name);
                 return (
                   <ListItem
                     key={subject._id}
-                    item={{
-                      name: subject.name,
-                      weightage: subject.weightage || "20%",
-                      engagement: subject.engagement || "2.2K",
-                      isCompleted: subject.isCompleted || false,
-                      progress: subject.progress || 0,
-                    }}
+                    item={subject}
                     index={index}
                     href={`/${examSlug}/${subjectSlug}`}
                   />
@@ -189,7 +187,7 @@ const ExamPage = () => {
               })
             ) : (
               <div className="text-center py-8 text-gray-500">
-                No subjects available for this exam.
+                {PLACEHOLDERS.NO_DATA}
               </div>
             )}
           </div>

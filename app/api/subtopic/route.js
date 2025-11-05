@@ -7,47 +7,55 @@ import Unit from "@/models/Unit";
 import Chapter from "@/models/Chapter";
 import Topic from "@/models/Topic";
 import mongoose from "mongoose";
+import { parsePagination, createPaginationResponse } from "@/utils/pagination";
+import { successResponse, errorResponse, handleApiError } from "@/utils/apiResponse";
+import { STATUS, ERROR_MESSAGES } from "@/constants";
 
 // ---------- GET ALL SUBTOPICS ----------
 export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
+    
+    // Parse pagination
+    const { page, limit, skip } = parsePagination(searchParams);
+    
+    // Get filters
     const topicId = searchParams.get("topicId");
+    const statusFilter = searchParams.get("status") || STATUS.ACTIVE;
 
+    // Build query
     const filter = {};
     if (topicId) {
       if (!mongoose.Types.ObjectId.isValid(topicId)) {
-        return NextResponse.json(
-          { success: false, message: "Invalid topicId" },
-          { status: 400 }
-        );
+        return errorResponse("Invalid topicId", 400);
       }
       filter.topicId = topicId;
     }
+    if (statusFilter !== "all") {
+      filter.status = statusFilter;
+    }
 
+    // Get total count
+    const total = await SubTopic.countDocuments(filter);
+
+    // Fetch subtopics with pagination
     const subTopics = await SubTopic.find(filter)
       .populate("examId", "name status")
       .populate("subjectId", "name")
       .populate("unitId", "name orderNumber")
       .populate("chapterId", "name orderNumber")
       .populate("topicId", "name orderNumber")
-      .sort({ createdAt: -1 });
+      .sort({ orderNumber: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    return NextResponse.json({
-      success: true,
-      count: subTopics.length,
-      data: subTopics,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching sub topics:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch sub topics",
-      },
-      { status: 500 }
+      createPaginationResponse(subTopics, total, page, limit)
     );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -162,6 +170,11 @@ export async function POST(request) {
         chapterId: item.chapterId,
         topicId,
         orderNumber: finalOrderNumber,
+        status: item.status || STATUS.ACTIVE,
+        content: item.content || "",
+        title: item.title || "",
+        metaDescription: item.metaDescription || "",
+        keywords: item.keywords || "",
       });
       createdIds.push(doc._id);
     }
@@ -171,38 +184,16 @@ export async function POST(request) {
       .populate("subjectId", "name")
       .populate("unitId", "name orderNumber")
       .populate("chapterId", "name orderNumber")
-      .populate("topicId", "name orderNumber");
+      .populate("topicId", "name orderNumber")
+      .lean();
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: `Sub topic${
-          createdIds.length > 1 ? "s" : ""
-        } created successfully`,
-        data: populated,
-      },
-      { status: 201 }
+    return successResponse(
+      populated,
+      `Sub topic${createdIds.length > 1 ? "s" : ""} created successfully`,
+      201
     );
   } catch (error) {
-    console.error("❌ Error creating sub topic:", error);
-
-    if (error.code === 11000) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Order number already exists for this topic",
-        },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create sub topic",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.SAVE_FAILED);
   }
 }
 

@@ -6,46 +6,54 @@ import Subject from "@/models/Subject";
 import Unit from "@/models/Unit";
 import Chapter from "@/models/Chapter";
 import mongoose from "mongoose";
+import { parsePagination, createPaginationResponse } from "@/utils/pagination";
+import { successResponse, errorResponse, handleApiError } from "@/utils/apiResponse";
+import { STATUS, ERROR_MESSAGES } from "@/constants";
 
 // ---------- GET ALL TOPICS ----------
 export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
+    
+    // Parse pagination
+    const { page, limit, skip } = parsePagination(searchParams);
+    
+    // Get filters
     const chapterId = searchParams.get("chapterId");
+    const statusFilter = searchParams.get("status") || STATUS.ACTIVE;
 
+    // Build query
     const filter = {};
     if (chapterId) {
       if (!mongoose.Types.ObjectId.isValid(chapterId)) {
-        return NextResponse.json(
-          { success: false, message: "Invalid chapterId" },
-          { status: 400 }
-        );
+        return errorResponse("Invalid chapterId", 400);
       }
       filter.chapterId = chapterId;
     }
+    if (statusFilter !== "all") {
+      filter.status = statusFilter;
+    }
 
+    // Get total count
+    const total = await Topic.countDocuments(filter);
+
+    // Fetch topics with pagination
     const topics = await Topic.find(filter)
       .populate("examId", "name status")
       .populate("subjectId", "name")
       .populate("unitId", "name orderNumber")
       .populate("chapterId", "name orderNumber")
-      .sort({ createdAt: -1 });
+      .sort({ orderNumber: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    return NextResponse.json({
-      success: true,
-      count: topics.length,
-      data: topics,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching topics:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch topics",
-      },
-      { status: 500 }
+      createPaginationResponse(topics, total, page, limit)
     );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -154,6 +162,11 @@ export async function POST(request) {
         unitId: item.unitId,
         chapterId,
         orderNumber: finalOrderNumber,
+        status: item.status || STATUS.ACTIVE,
+        content: item.content || "",
+        title: item.title || "",
+        metaDescription: item.metaDescription || "",
+        keywords: item.keywords || "",
       });
       createdTopics.push(doc._id);
     }
@@ -163,38 +176,16 @@ export async function POST(request) {
       .populate("examId", "name status")
       .populate("subjectId", "name")
       .populate("unitId", "name orderNumber")
-      .populate("chapterId", "name orderNumber");
+      .populate("chapterId", "name orderNumber")
+      .lean();
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: `Topic${
-          createdTopics.length > 1 ? "s" : ""
-        } created successfully`,
-        data: populated,
-      },
-      { status: 201 }
+    return successResponse(
+      populated,
+      `Topic${createdTopics.length > 1 ? "s" : ""} created successfully`,
+      201
     );
   } catch (error) {
-    console.error("❌ Error creating topic:", error);
-
-    if (error.code === 11000) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Order number already exists for this chapter",
-        },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create topic",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.SAVE_FAILED);
   }
 }
 

@@ -5,18 +5,26 @@ import Exam from "@/models/Exam";
 import Subject from "@/models/Subject";
 import Unit from "@/models/Unit";
 import mongoose from "mongoose";
+import { parsePagination, createPaginationResponse } from "@/utils/pagination";
+import { successResponse, errorResponse, handleApiError } from "@/utils/apiResponse";
+import { STATUS, ERROR_MESSAGES } from "@/constants";
 
 // ---------- GET ALL CHAPTERS ----------
 export async function GET(request) {
   try {
     await connectDB();
-    
-    // Optional filters: unitId, subjectId, examId
     const { searchParams } = new URL(request.url);
+    
+    // Parse pagination
+    const { page, limit, skip } = parsePagination(searchParams);
+    
+    // Get filters
     const unitId = searchParams.get("unitId");
     const subjectId = searchParams.get("subjectId");
     const examId = searchParams.get("examId");
+    const statusFilter = searchParams.get("status") || STATUS.ACTIVE;
 
+    // Build query
     const query = {};
     if (unitId && mongoose.Types.ObjectId.isValid(unitId)) {
       query.unitId = unitId;
@@ -27,27 +35,28 @@ export async function GET(request) {
     if (examId && mongoose.Types.ObjectId.isValid(examId)) {
       query.examId = examId;
     }
+    if (statusFilter !== "all") {
+      query.status = statusFilter;
+    }
 
+    // Get total count
+    const total = await Chapter.countDocuments(query);
+
+    // Fetch chapters with pagination
     const chapters = await Chapter.find(query)
       .populate("examId", "name status")
       .populate("subjectId", "name")
       .populate("unitId", "name orderNumber")
-      .sort({ orderNumber: 1, createdAt: -1 });
+      .sort({ orderNumber: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    return NextResponse.json({
-      success: true,
-      count: chapters.length,
-      data: chapters,
-    });
-  } catch (error) {
-    console.error("❌ Error fetching chapters:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch chapters",
-      },
-      { status: 500 }
+      createPaginationResponse(chapters, total, page, limit)
     );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
   }
 }
 
@@ -55,87 +64,31 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
-
     const body = await request.json();
-    const { name, examId, subjectId, unitId, orderNumber } = body;
+    const { name, examId, subjectId, unitId, orderNumber, status, content, title, metaDescription, keywords } = body;
 
     // Validation
     if (!name || !examId || !subjectId || !unitId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Chapter name, exam, subject, and unit are required",
-        },
-        { status: 400 }
-      );
+      return errorResponse("Chapter name, exam, subject, and unit are required", 400);
     }
 
     // Validate ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(examId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid exam ID",
-        },
-        { status: 400 }
-      );
+    if (!mongoose.Types.ObjectId.isValid(examId) || 
+        !mongoose.Types.ObjectId.isValid(subjectId) || 
+        !mongoose.Types.ObjectId.isValid(unitId)) {
+      return errorResponse("Invalid ID format", 400);
     }
 
-    if (!mongoose.Types.ObjectId.isValid(subjectId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid subject ID",
-        },
-        { status: 400 }
-      );
-    }
+    // Check if exam, subject, and unit exist
+    const [exam, subject, unit] = await Promise.all([
+      Exam.findById(examId),
+      Subject.findById(subjectId),
+      Unit.findById(unitId),
+    ]);
 
-    if (!mongoose.Types.ObjectId.isValid(unitId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid unit ID",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if exam exists
-    const exam = await Exam.findById(examId);
-    if (!exam) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Exam not found",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Check if subject exists
-    const subject = await Subject.findById(subjectId);
-    if (!subject) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Subject not found",
-        },
-        { status: 404 }
-      );
-    }
-
-    // Check if unit exists
-    const unit = await Unit.findById(unitId);
-    if (!unit) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Unit not found",
-        },
-        { status: 404 }
-      );
-    }
+    if (!exam) return errorResponse(ERROR_MESSAGES.EXAM_NOT_FOUND, 404);
+    if (!subject) return errorResponse(ERROR_MESSAGES.SUBJECT_NOT_FOUND, 404);
+    if (!unit) return errorResponse(ERROR_MESSAGES.UNIT_NOT_FOUND, 404);
 
     // Capitalize first letter of each word in chapter name
     const chapterName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
@@ -147,13 +100,7 @@ export async function POST(request) {
     });
 
     if (existingChapter) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Chapter name already exists in this unit",
-        },
-        { status: 409 }
-      );
+      return errorResponse("Chapter name already exists in this unit", 409);
     }
 
     // Auto-generate order number if not provided
@@ -161,7 +108,8 @@ export async function POST(request) {
     if (!finalOrderNumber) {
       const lastChapter = await Chapter.findOne({ unitId })
         .sort({ orderNumber: -1 })
-        .select("orderNumber");
+        .select("orderNumber")
+        .lean();
       finalOrderNumber = lastChapter ? lastChapter.orderNumber + 1 : 1;
     }
 
@@ -172,42 +120,23 @@ export async function POST(request) {
       subjectId,
       unitId,
       orderNumber: finalOrderNumber,
+      status: status || STATUS.ACTIVE,
+      content: content || "",
+      title: title || "",
+      metaDescription: metaDescription || "",
+      keywords: keywords || "",
     });
 
     // Populate the data before returning
     const populatedChapter = await Chapter.findById(chapter._id)
       .populate("examId", "name status")
       .populate("subjectId", "name")
-      .populate("unitId", "name orderNumber");
+      .populate("unitId", "name orderNumber")
+      .lean();
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Chapter created successfully",
-        data: populatedChapter,
-      },
-      { status: 201 }
-    );
+    return successResponse(populatedChapter, "Chapter created successfully", 201);
   } catch (error) {
-    console.error("❌ Error creating chapter:", error);
-
-    if (error.code === 11000) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Order number already exists for this unit",
-        },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create chapter",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, ERROR_MESSAGES.SAVE_FAILED);
   }
 }
 
