@@ -67,7 +67,7 @@ export async function PATCH(request, { params }) {
     if (topicIds.length > 0) {
       subTopicsResult = await SubTopic.updateMany(
         { topicId: { $in: topicIds } },
-        { status }
+        { $set: { status } }
       );
     }
     console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
@@ -77,7 +77,7 @@ export async function PATCH(request, { params }) {
     if (chapterIds.length > 0) {
       topicsResult = await Topic.updateMany(
         { chapterId: { $in: chapterIds } },
-        { status }
+        { $set: { status } }
       );
     }
     console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
@@ -87,14 +87,28 @@ export async function PATCH(request, { params }) {
     if (unitIds.length > 0) {
       chaptersResult = await Chapter.updateMany(
         { unitId: { $in: unitIds } },
-        { status }
+        { $set: { status } }
       );
     }
     console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
 
     // Update all units in this subject
-    const unitsResult = await Unit.updateMany({ subjectId: id }, { status });
+    const unitsResult = await Unit.updateMany(
+      { subjectId: id },
+      { $set: { status } }
+    );
     console.log(`✅ Updated ${unitsResult.modifiedCount} Units`);
+
+    // Clear cache for subject queries
+    try {
+      const subjectRouteModule = await import("../../route");
+      if (subjectRouteModule?.queryCache) {
+        subjectRouteModule.queryCache.clear();
+        console.log("✅ Cleared subject query cache");
+      }
+    } catch (cacheError) {
+      console.warn("⚠️ Could not clear subject cache:", cacheError);
+    }
 
     return NextResponse.json({
       success: true,

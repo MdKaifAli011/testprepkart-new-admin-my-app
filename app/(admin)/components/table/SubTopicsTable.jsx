@@ -144,41 +144,41 @@ const SubTopicsTable = ({
             style={{ animationDelay: `${groupIndex * 0.1}s` }}
           >
             {/* 💎 Consistent Compact Breadcrumb Header */}
-            <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-4 py-3 rounded-t-xl border border-blue-100 shadow-sm">
+            <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-5 py-4 rounded-t-xl border-b-2 border-blue-200 shadow-md">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 flex-wrap text-xs font-semibold text-gray-700">
+                <div className="flex items-center gap-2.5 flex-wrap text-sm font-semibold text-gray-700">
                   {/* Exam */}
-                  <span className="px-3 py-1 bg-green-500 text-white rounded-full shadow-sm hover:bg-green-600 transition-all duration-200">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-md hover:from-green-600 hover:to-green-700 transition-all duration-200 hover:scale-105">
                     {group.examName}
                   </span>
-                  <span className="text-gray-400 font-bold select-none">›</span>
+                  <span className="text-gray-400 font-bold select-none text-lg">›</span>
 
                   {/* Subject */}
-                  <span className="px-3 py-1 bg-purple-500 text-white rounded-full shadow-sm hover:bg-purple-600 transition-all duration-200">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full shadow-md hover:from-purple-600 hover:to-purple-700 transition-all duration-200 hover:scale-105">
                     {group.subjectName}
                   </span>
-                  <span className="text-gray-400 font-bold select-none">›</span>
+                  <span className="text-gray-400 font-bold select-none text-lg">›</span>
 
                   {/* Unit */}
-                  <span className="px-3 py-1 bg-blue-500 text-white rounded-full shadow-sm hover:bg-blue-600 transition-all duration-200">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 hover:scale-105">
                     {group.unitName}
                   </span>
-                  <span className="text-gray-400 font-bold select-none">›</span>
+                  <span className="text-gray-400 font-bold select-none text-lg">›</span>
 
                   {/* Chapter */}
-                  <span className="px-3 py-1 bg-indigo-500 text-white rounded-full shadow-sm hover:bg-indigo-600 transition-all duration-200">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-full shadow-md hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 hover:scale-105">
                     {group.chapterName}
                   </span>
-                  <span className="text-gray-400 font-bold select-none">›</span>
+                  <span className="text-gray-400 font-bold select-none text-lg">›</span>
 
                   {/* Topic */}
-                  <span className="px-3 py-1 bg-orange-500 text-white rounded-full shadow-sm hover:bg-orange-600 transition-all duration-200">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full shadow-md hover:from-orange-600 hover:to-orange-700 transition-all duration-200 hover:scale-105">
                     {group.topicName}
                   </span>
-                  <span className="text-gray-400 font-bold select-none">›</span>
+                  <span className="text-gray-400 font-bold select-none text-lg">›</span>
 
                   {/* SubTopic Count */}
-                  <span className="px-3 py-1 bg-gray-500 text-white rounded-full shadow-sm hover:bg-gray-600 transition-all duration-200">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-full shadow-md hover:from-gray-600 hover:to-gray-700 transition-all duration-200 hover:scale-105">
                     {sortedSubTopics.length}{" "}
                     {sortedSubTopics.length === 1 ? "SubTopic" : "SubTopics"}
                   </span>
@@ -188,16 +188,16 @@ const SubTopicsTable = ({
 
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full text-xs text-gray-700">
-                <thead className="bg-gray-50 border-b border-gray-200">
+              <table className="min-w-full text-sm text-gray-700">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 w-10"></th>
-                    <th className="px-4 py-3 text-left">Order</th>
-                    <th className="px-4 py-3 text-left">SubTopic Name</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3.5 w-10"></th>
+                    <th className="px-4 py-3.5 text-left font-semibold text-gray-700 w-20">Order</th>
+                    <th className="px-4 py-3.5 text-left font-semibold text-gray-700 min-w-[250px]">SubTopic Name</th>
+                    <th className="px-4 py-3.5 text-right font-semibold text-gray-700 w-40">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 bg-white">
                   {sortedSubTopics.map((subTopic, subTopicIndex) => {
                     const dragKey = `${groupIndex}-${subTopicIndex}`;
                     return (
@@ -210,70 +210,81 @@ const SubTopicsTable = ({
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, groupIndex, subTopicIndex)}
                         onDragEnd={() => setDraggedIndex(null)}
-                        className={`hover:bg-blue-50 transition-colors cursor-move ${
-                          draggedIndex === dragKey ? "opacity-50" : ""
+                        className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 cursor-move border-b border-gray-100 ${
+                          draggedIndex === dragKey ? "opacity-50 bg-gray-100" : ""
                         } ${
                           subTopic.status === "inactive"
                             ? "opacity-60 bg-gray-50"
-                            : ""
+                            : "bg-white"
                         }`}
                       >
-                        <td className="px-4 py-3  text-gray-400">
-                          <FaGripVertical className="cursor-grab" />
+                        <td className="px-3 py-4 text-gray-400">
+                          <FaGripVertical className="cursor-grab hover:text-gray-600 transition-colors" />
                         </td>
                         {/* Order Number */}
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                        <td className="px-4 py-4">
+                          <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 font-bold text-sm shadow-sm border border-blue-200">
                             {subTopic.orderNumber || subTopicIndex + 1}
                           </span>
                         </td>
                         {/* SubTopic Name */}
-                        <td className="px-4 py-3 font-medium text-base">
+                        <td className="px-4 py-4 min-w-[200px]">
                           <span
                             onClick={() => handleSubTopicClick(subTopic._id)}
-                            className={`cursor-pointer hover:text-blue-600 hover:underline transition-colors ${
+                            className={`cursor-pointer font-semibold text-base hover:text-blue-600 hover:underline transition-all duration-200 break-words whitespace-normal leading-relaxed ${
                               subTopic.status === "inactive"
                                 ? "text-gray-500 line-through"
                                 : "text-gray-900"
                             }`}
+                            title={subTopic.name}
                           >
                             {subTopic.name}
                           </span>
                         </td>
                         {/* Actions */}
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-4 text-right">
                           {/* Action Buttons */}
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1.5">
                             {/* view subtopic details */}
                             <button
-                              onClick={() => handleSubTopicClick(subTopic._id)}
-                              className="p-2 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSubTopicClick(subTopic._id);
+                              }}
+                              className="p-2.5 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                               title="View SubTopic Details"
                             >
                               <FaEye className="text-sm" />
                             </button>
                             {/* Edit SubTopic */}
                             <button
-                              onClick={() => onEdit && onEdit(subTopic)}
-                              className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit && onEdit(subTopic);
+                              }}
+                              className="p-2.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                               title="Edit SubTopic"
                             >
                               <FaEdit className="text-sm" />
                             </button>
                             {/* Delete SubTopic */}
                             <button
-                              onClick={() => onDelete && onDelete(subTopic)}
-                              className="p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete && onDelete(subTopic);
+                              }}
+                              className="p-2.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                               title="Delete SubTopic"
                             >
                               <FaTrash className="text-sm" />
                             </button>
                             {/* Toggle Status SubTopic */}
                             <button
-                              onClick={() =>
-                                onToggleStatus && onToggleStatus(subTopic)
-                              }
-                              className="p-2 rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50 transition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus && onToggleStatus(subTopic);
+                              }}
+                              className="p-2.5 rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                               title={
                                 subTopic.status === "active"
                                   ? "Deactivate SubTopic"
@@ -298,53 +309,64 @@ const SubTopicsTable = ({
                 return (
                   <div
                     key={subTopic._id || subTopicIndex}
-                    className={`p-4 hover:bg-blue-50 transition-all duration-150 ${
+                    className={`p-5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 border-b border-gray-100 ${
                       subTopic.status === "inactive"
                         ? "opacity-60 bg-gray-50"
-                        : ""
+                        : "bg-white"
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start gap-3 mb-3">
+                      <div className="flex-1 min-w-0 pr-2">
                         <h3
                           onClick={() => handleSubTopicClick(subTopic._id)}
-                          className={`text-base font-semibold mb-1 cursor-pointer hover:text-blue-600 hover:underline transition-colors ${
+                          className={`text-base font-bold mb-2 cursor-pointer hover:text-blue-600 hover:underline transition-all duration-200 break-words whitespace-normal leading-relaxed ${
                             subTopic.status === "inactive"
                               ? "text-gray-500 line-through"
                               : "text-gray-900"
                           }`}
+                          title={subTopic.name}
                         >
                           {subTopic.name}
                         </h3>
-                        <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-full">
+                        <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 font-semibold text-xs shadow-sm border border-blue-200">
                           #{subTopic.orderNumber || subTopicIndex + 1}
                         </span>
                       </div>
-                      <div className="flex gap-2 ml-2">
+                      <div className="flex gap-1.5 flex-shrink-0">
                         <button
-                          onClick={() => handleSubTopicClick(subTopic._id)}
-                          className="p-2 rounded-lg text-green-600 hover:bg-green-50 transition"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubTopicClick(subTopic._id);
+                          }}
+                          className="p-2.5 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title="View SubTopic Details"
                         >
                           <FaEye className="text-sm" />
                         </button>
                         <button
-                          onClick={() => onEdit && onEdit(subTopic)}
-                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit && onEdit(subTopic);
+                          }}
+                          className="p-2.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                         >
                           <FaEdit className="text-sm" />
                         </button>
                         <button
-                          onClick={() => onDelete && onDelete(subTopic)}
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete && onDelete(subTopic);
+                          }}
+                          className="p-2.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                         >
                           <FaTrash className="text-sm" />
                         </button>
                         <button
-                          onClick={() =>
-                            onToggleStatus && onToggleStatus(subTopic)
-                          }
-                          className="p-2 rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50 transition"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleStatus && onToggleStatus(subTopic);
+                          }}
+                          className="p-2.5 rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title={
                             subTopic.status === "active"
                               ? "Deactivate SubTopic"

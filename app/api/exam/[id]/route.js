@@ -123,18 +123,86 @@ export async function PATCH(request, { params }) {
 
     // Cascading: Update all children status if status changed
     if (status) {
-      await Promise.all([
-        SubTopic.updateMany({ examId: id }, { status }),
-        Topic.updateMany({ examId: id }, { status }),
-        Chapter.updateMany({ examId: id }, { status }),
-        Unit.updateMany({ examId: id }, { status }),
-        Subject.updateMany({ examId: id }, { status }),
-      ]);
+      console.log(`🔄 Cascading status update to ${status} for exam ${id}`);
+      
+      // Find all subjects in this exam
+      const subjects = await Subject.find({ examId: id });
+      const subjectIds = subjects.map((subject) => subject._id);
+      
+      // Find all units in these subjects
+      const units = await Unit.find({ subjectId: { $in: subjectIds } });
+      const unitIds = units.map((unit) => unit._id);
+      
+      // Find all chapters in these units
+      const chapters = await Chapter.find({ unitId: { $in: unitIds } });
+      const chapterIds = chapters.map((chapter) => chapter._id);
+      
+      // Find all topics in these chapters
+      const topics = await Topic.find({ chapterId: { $in: chapterIds } });
+      const topicIds = topics.map((topic) => topic._id);
+      
+      // Update all subtopics in these topics
+      let subTopicsResult = { modifiedCount: 0 };
+      if (topicIds.length > 0) {
+        subTopicsResult = await SubTopic.updateMany(
+          { topicId: { $in: topicIds } },
+          { $set: { status } }
+        );
+      }
+      console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
+      
+      // Update all topics in these chapters
+      let topicsResult = { modifiedCount: 0 };
+      if (chapterIds.length > 0) {
+        topicsResult = await Topic.updateMany(
+          { chapterId: { $in: chapterIds } },
+          { $set: { status } }
+        );
+      }
+      console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
+      
+      // Update all chapters in these units
+      let chaptersResult = { modifiedCount: 0 };
+      if (unitIds.length > 0) {
+        chaptersResult = await Chapter.updateMany(
+          { unitId: { $in: unitIds } },
+          { $set: { status } }
+        );
+      }
+      console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
+      
+      // Update all units in these subjects
+      let unitsResult = { modifiedCount: 0 };
+      if (subjectIds.length > 0) {
+        unitsResult = await Unit.updateMany(
+          { subjectId: { $in: subjectIds } },
+          { $set: { status } }
+        );
+      }
+      console.log(`✅ Updated ${unitsResult.modifiedCount} Units`);
+      
+      // Update all subjects in this exam
+      const subjectsResult = await Subject.updateMany(
+        { examId: id },
+        { $set: { status } }
+      );
+      console.log(`✅ Updated ${subjectsResult.modifiedCount} Subjects`);
+    }
+
+    // Clear cache for exam queries
+    try {
+      const examRouteModule = await import("../route");
+      if (examRouteModule?.queryCache) {
+        examRouteModule.queryCache.clear();
+        console.log("✅ Cleared exam query cache");
+      }
+    } catch (cacheError) {
+      console.warn("⚠️ Could not clear exam cache:", cacheError);
     }
 
     return successResponse(
       updated,
-      `Exam ${status === "inactive" ? "deactivated" : "updated"} successfully`
+      `Exam and all children ${status === "inactive" ? "deactivated" : "activated"} successfully`
     );
   } catch (error) {
     return handleApiError(error, "Failed to update exam");

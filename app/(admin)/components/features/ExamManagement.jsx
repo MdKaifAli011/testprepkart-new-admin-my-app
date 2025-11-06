@@ -37,7 +37,8 @@ const ExamManagement = () => {
     try {
       setIsDataLoading(true);
       setError(null);
-      const response = await api.get("/exam");
+      // Fetch all exams (active and inactive) to show correct status
+      const response = await api.get("/exam?status=all");
 
       if (response.data?.success) {
         setExams(response.data.data || []);
@@ -204,12 +205,8 @@ const ExamManagement = () => {
         });
 
         if (response.data.success) {
-          // Update the exam status in the list
-          setExams((prevExams) =>
-            prevExams.map((e) =>
-              e._id === exam._id ? { ...e, status: newStatus } : e
-            )
-          );
+          // Refetch exams to get updated status from database
+          await fetchExams();
           success(
             `Exam "${exam.name}" and all children ${action}d successfully!`
           );

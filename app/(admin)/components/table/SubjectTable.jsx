@@ -54,18 +54,18 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
           style={{ animationDelay: `${groupIndex * 0.1}s` }}
         >
           {/* 💎 Refined Compact Breadcrumb Header */}
-          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-4 py-3 rounded-lg border border-indigo-100 shadow-sm">
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-5 py-4 rounded-t-xl border-b-2 border-blue-200 shadow-md">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-wrap text-xs font-semibold text-gray-700">
+              <div className="flex items-center gap-2.5 flex-wrap text-sm font-semibold text-gray-700">
                 {/* Exam Name */}
-                <span className="px-3 py-1 rounded-full bg-blue-600 text-white shadow-sm hover:shadow-md hover:bg-blue-700 transition-all duration-200">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-md hover:from-green-600 hover:to-green-700 transition-all duration-200 hover:scale-105">
                   {group.examName}
                 </span>
 
-                <span className="text-gray-400 font-bold select-none">›</span>
+                <span className="text-gray-400 font-bold select-none text-lg">›</span>
 
                 {/* Subject Count */}
-                <span className="px-3 py-1 rounded-full bg-indigo-500 text-white shadow-sm hover:shadow-md hover:bg-indigo-600 transition-all duration-200">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-full shadow-md hover:from-gray-600 hover:to-gray-700 transition-all duration-200 hover:scale-105">
                   {group.subjects.length}{" "}
                   {group.subjects.length === 1 ? "Subject" : "Subjects"}
                 </span>
@@ -75,70 +75,83 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
 
           {/* Table */}
           <div className="hidden lg:block overflow-x-auto">
-            <table className="min-w-full text-xs text-left text-gray-700">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="min-w-full text-sm text-gray-700">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600">
+                  <th className="px-5 py-3.5 text-left font-semibold text-gray-700 min-w-[300px]">
                     Subject Name
                   </th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-600 text-right">
+                  <th className="px-5 py-3.5 text-right font-semibold text-gray-700 w-40">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 bg-white">
                 {group.subjects.map((subject, index) => (
                   <tr
                     key={subject._id || subject.id || index}
-                    className={`hover:bg-blue-50 transition-colors ${
-                      subject.status === "inactive" ? "opacity-60 bg-gray-50" : ""
+                    className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 cursor-pointer border-b border-gray-100 ${
+                      subject.status === "inactive" 
+                        ? "opacity-60 bg-gray-50" 
+                        : "bg-white"
                     }`}
                   >
                     <td
-                      className={`px-4 py-3 font-medium text-base cursor-pointer hover:text-blue-600 transition-colors ${
+                      className={`px-5 py-4 font-semibold text-base hover:text-blue-600 hover:underline transition-all duration-200 break-words whitespace-normal leading-relaxed ${
                         subject.status === "inactive"
                           ? "text-gray-500 line-through"
                           : "text-gray-900"
                       }`}
                       onClick={() => handleSubjectClick(subject)}
+                      title={subject.name}
                     >
                       {subject.name}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-3">
+                    <td className="px-5 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => handleSubjectClick(subject)}
-                          className="text-green-600 hover:text-green-800 p-1.5 rounded-full hover:bg-green-100 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubjectClick(subject);
+                          }}
+                          className="p-2.5 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title="View Subject Details"
                         >
-                          <FaEye className="text-base" />
+                          <FaEye className="text-sm" />
                         </button>
                         <button
-                          onClick={() => onEdit && onEdit(subject)}
-                          className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-100 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit && onEdit(subject);
+                          }}
+                          className="p-2.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title="Edit Subject"
                         >
-                          <FaEdit className="text-base" />
+                          <FaEdit className="text-sm" />
                         </button>
                         <button
-                          onClick={() => onDelete && onDelete(subject)}
-                          className="text-red-600 hover:text-red-800 p-1.5 rounded-full hover:bg-red-100 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete && onDelete(subject);
+                          }}
+                          className="p-2.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title="Delete Subject"
                         >
-                          <FaTrash className="text-base" />
+                          <FaTrash className="text-sm" />
                         </button>
                         <button
-                          onClick={() =>
-                            onToggleStatus && onToggleStatus(subject)
-                          }
-                          className="text-orange-600 hover:text-orange-800 p-1.5 rounded-full hover:bg-orange-100 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleStatus && onToggleStatus(subject);
+                          }}
+                          className="p-2.5 rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                           title={
                             subject.status === "active"
                               ? "Deactivate Subject"
                               : "Activate Subject"
                           }
                         >
-                          <FaPowerOff className="text-base" />
+                          <FaPowerOff className="text-sm" />
                         </button>
                       </div>
                     </td>
@@ -153,51 +166,75 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
             {group.subjects.map((subject, index) => (
               <div
                 key={subject._id || subject.id || index}
-                className={`p-4 hover:bg-blue-50 transition-all duration-150 ${
-                  subject.status === "inactive" ? "opacity-60 bg-gray-50" : ""
+                className={`p-5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 border-b border-gray-100 ${
+                  subject.status === "inactive" 
+                    ? "opacity-60 bg-gray-50" 
+                    : "bg-white"
                 }`}
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div
-                    className="flex-1 min-w-0 cursor-pointer hover:text-blue-600 transition-colors"
+                    className="flex-1 min-w-0 pr-2 cursor-pointer hover:text-blue-600 transition-all duration-200"
                     onClick={() => handleSubjectClick(subject)}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        subject.status === "inactive" ? "bg-red-500" : "bg-green-500"
+                    <h3 
+                      className={`text-base font-bold mb-2 break-words whitespace-normal leading-relaxed ${
+                        subject.status === "inactive" 
+                          ? "text-gray-500 line-through" 
+                          : "text-gray-900"
+                      }`}
+                      title={subject.name}
+                    >
+                      {subject.name}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm ${
+                        subject.status === "inactive" 
+                          ? "bg-red-500" 
+                          : "bg-green-500"
                       }`}></div>
-                      <h3 className={`text-sm font-medium truncate ${
-                        subject.status === "inactive" ? "text-gray-500 line-through" : "text-gray-900"
-                      }`}>
-                        {subject.name}
-                      </h3>
+                      <span className="text-xs text-gray-500 font-medium">
+                        {subject.status === "active" ? "Active" : "Inactive"}
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 ml-2">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button
-                      onClick={() => handleSubjectClick(subject)}
-                      className="text-green-600 hover:text-green-700 p-2 rounded-md hover:bg-green-50 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSubjectClick(subject);
+                      }}
+                      className="p-2.5 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                       title="View Subject Details"
                     >
                       <FaEye className="text-sm" />
                     </button>
                     <button
-                      onClick={() => onEdit && onEdit(subject)}
-                      className="text-blue-600 hover:text-blue-700 p-2 rounded-md hover:bg-blue-50 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit && onEdit(subject);
+                      }}
+                      className="p-2.5 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                       title="Edit Subject"
                     >
                       <FaEdit className="text-sm" />
                     </button>
                     <button
-                      onClick={() => onDelete && onDelete(subject)}
-                      className="text-red-600 hover:text-red-700 p-2 rounded-md hover:bg-red-50 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete && onDelete(subject);
+                      }}
+                      className="p-2.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                       title="Delete Subject"
                     >
                       <FaTrash className="text-sm" />
                     </button>
                     <button
-                      onClick={() => onToggleStatus && onToggleStatus(subject)}
-                      className="text-orange-600 hover:text-orange-700 p-2 rounded-md hover:bg-orange-50 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleStatus && onToggleStatus(subject);
+                      }}
+                      className="p-2.5 rounded-lg text-orange-600 hover:text-orange-700 hover:bg-orange-50 transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm hover:shadow-md"
                       title={
                         subject.status === "active"
                           ? "Deactivate Subject"

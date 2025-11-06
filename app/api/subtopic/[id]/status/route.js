@@ -31,7 +31,7 @@ export async function PATCH(request, { params }) {
     // Update subtopic status
     const updated = await SubTopic.findByIdAndUpdate(
       id,
-      { status },
+      { $set: { status } },
       { new: true }
     );
 

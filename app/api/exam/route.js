@@ -7,7 +7,7 @@ import { buildQueryFromParams, getCachedOrExecute, optimizedFind } from "@/utils
 import { STATUS, ERROR_MESSAGES } from "@/constants";
 
 // Cache for frequently accessed queries
-const queryCache = new Map();
+export const queryCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ✅ GET: Fetch all exams with pagination (optimized)

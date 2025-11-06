@@ -58,7 +58,7 @@ export async function PATCH(request, { params }) {
     if (topicIds.length > 0) {
       subTopicsResult = await SubTopic.updateMany(
         { topicId: { $in: topicIds } },
-        { status }
+        { $set: { status } }
       );
     }
     console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
@@ -68,13 +68,16 @@ export async function PATCH(request, { params }) {
     if (chapterIds.length > 0) {
       topicsResult = await Topic.updateMany(
         { chapterId: { $in: chapterIds } },
-        { status }
+        { $set: { status } }
       );
     }
     console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
 
     // Update all chapters in this unit
-    const chaptersResult = await Chapter.updateMany({ unitId: id }, { status });
+    const chaptersResult = await Chapter.updateMany(
+      { unitId: id },
+      { $set: { status } }
+    );
     console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
 
     return NextResponse.json({

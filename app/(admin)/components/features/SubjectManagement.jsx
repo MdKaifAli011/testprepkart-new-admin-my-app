@@ -42,7 +42,8 @@ const SubjectManagement = () => {
     try {
       setIsDataLoading(true);
       setError(null);
-      const response = await api.get("/subject");
+      // Fetch all subjects (active and inactive) to show correct status
+      const response = await api.get("/subject?status=all");
 
       if (response.data?.success) {
         setSubjects(response.data.data || []);
@@ -65,7 +66,8 @@ const SubjectManagement = () => {
   // ✅ Fetch Exams (for dropdown) using Axios
   const fetchExams = async () => {
     try {
-      const response = await api.get("/exam");
+      // Fetch all exams (active and inactive) for dropdown
+      const response = await api.get("/exam?status=all");
 
       if (response.data?.success) {
         setExams(response.data.data || []);
@@ -245,12 +247,8 @@ const SubjectManagement = () => {
         });
 
         if (response.data.success) {
-          // Update the subject status in the list
-          setSubjects((prev) =>
-            prev.map((s) =>
-              s._id === subject._id ? { ...s, status: newStatus } : s
-            )
-          );
+          // Refetch subjects to get updated status from database
+          await fetchSubjects();
           success(
             `Subject "${subject.name}" and all children ${action}d successfully!`
           );

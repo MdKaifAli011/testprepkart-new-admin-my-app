@@ -47,7 +47,10 @@ export async function PATCH(request, { params }) {
     // Cascading: Update all children status
     console.log(`🔄 Cascading status update to ${status} for topic ${id}`);
 
-    const result = await SubTopic.updateMany({ topicId: id }, { status });
+    const result = await SubTopic.updateMany(
+      { topicId: id },
+      { $set: { status } }
+    );
     console.log(`✅ Updated ${result.modifiedCount} SubTopics`);
 
     return NextResponse.json({
