@@ -15,8 +15,15 @@ import {
   FaSearch,
   FaTimes,
 } from "react-icons/fa";
-import { createSlug } from "../lib/api";
-import { useExamData } from "../context/ExamDataContext";
+import {
+  fetchExams,
+  fetchSubjectsByExam,
+  fetchUnitsBySubject,
+  fetchChaptersByUnit,
+  fetchTopicsByChapter,
+  createSlug,
+  findByIdOrSlug,
+} from "../lib/api";
 
 const Sidebar = ({ isOpen = false, onClose }) => {
   const router = useRouter();
@@ -24,25 +31,15 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   const dropdownRef = useRef(null);
   const sidebarRef = useRef(null);
   const searchTimeoutRef = useRef(null);
-  const isInitialMountRef = useRef(true);
-  const hasRefreshedRef = useRef(false);
 
-  // Use ExamDataContext instead of local state
-  const {
-    exams,
-    examDataCache,
-    loadingExams,
-    selectedExamId,
-    setSelectedExamId,
-    loadExams,
-    loadExamData,
-    getExamBySlug,
-    getExamData,
-    isExamDataLoading,
-  } = useExamData();
+  // Local state for exams and exam data
+  const [exams, setExams] = useState([]);
+  const [loadingExams, setLoadingExams] = useState(false);
+  const [selectedExam, setSelectedExam] = useState(null);
+  const [subjectsWithData, setSubjectsWithData] = useState({});
+  const [loadingExamData, setLoadingExamData] = useState(false);
 
   const [examDropdownOpen, setExamDropdownOpen] = useState(false);
-  const [selectedExam, setSelectedExam] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
@@ -112,12 +109,6 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     },
     [debouncedSearchQuery]
   );
-
-  // Get current exam data from context
-  const subjectsWithData = useMemo(() => {
-    if (!selectedExamId) return {};
-    return getExamData(selectedExamId) || {};
-  }, [selectedExamId, getExamData]);
 
   // Filter subjects data based on search query
   const filteredSubjectsData = useMemo(() => {
@@ -192,7 +183,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     }
   }, [debouncedSearchQuery, filteredSubjectsData]);
 
-  // Update expansion states based on current path (without reloading data)
+  // Update expansion states based on current path
   const updateExpansionStates = useCallback(
     (data, currentSubjectKey, currentUnitKey, currentChapterKey) => {
       const dataToUse = data || subjectsWithData;
@@ -240,45 +231,130 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       setExpandedChapters((prev) => ({ ...prev, ...newChaps }));
     },
     [subjectsWithData]
-  ); // Dependencies include subjectsWithData
+  );
 
-  // Check if currently loading exam data
-  const isLoading = useMemo(() => {
-    // Don't show loading if exams list is still loading or no exam selected
-    if (loadingExams || !selectedExamId) return false;
-    return isExamDataLoading(selectedExamId);
-  }, [selectedExamId, isExamDataLoading, loadingExams]);
-
-  // Detect page refresh and force data reload
-  useEffect(() => {
-    // Check if this is a page refresh (not initial mount)
-    if (isInitialMountRef.current) {
-      isInitialMountRef.current = false;
-
-      // Check if it's a page refresh using performance API
-      const isPageRefresh =
-        typeof window !== "undefined" &&
-        (performance.navigation?.type === 1 || // TYPE_RELOAD
-          performance.getEntriesByType?.("navigation")[0]?.type === "reload");
-
-      if (isPageRefresh) {
-        hasRefreshedRef.current = true;
-        // Force reload exams list on page refresh
-        if (exams.length > 0) {
-          loadExams(true);
-        }
-      }
+  // Load exams from API
+  const loadExams = useCallback(async () => {
+    if (exams.length > 0) return; // Already loaded
+    setLoadingExams(true);
+    try {
+      const fetchedExams = await fetchExams();
+      setExams(fetchedExams);
+    } catch (error) {
+      console.error("Error loading exams:", error);
+    } finally {
+      setLoadingExams(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exams.length]);
+
+  // Load exam data (subjects, units, chapters, topics) from API
+  const loadExamData = useCallback(async (examId) => {
+    if (!examId) return;
+
+    setLoadingExamData(true);
+    try {
+      // Helper function to extract only needed fields for sidebar
+      const extractSidebarFields = (item) => ({
+        _id: item._id,
+        name: item.name,
+        orderNumber: item.orderNumber || 0,
+      });
+
+      // Fetch subjects
+      const subjects = await fetchSubjectsByExam(examId);
+      const subjectData = {};
+
+      // Parallel fetch for all subjects' units
+      const subjectPromises = subjects.map(async (sub) => {
+        const units = await fetchUnitsBySubject(sub._id, examId);
+        return { sub, units };
+      });
+
+      const subjectResults = await Promise.all(subjectPromises);
+
+      // Initialize all subjects and units
+      subjectResults.forEach(({ sub, units }) => {
+        const subSlug = createSlug(sub.name);
+        if (!subjectData[subSlug]) {
+          subjectData[subSlug] = {
+            ...extractSidebarFields(sub),
+            units: {},
+          };
+        }
+        // Add all units
+        units.forEach((unit) => {
+          const unitSlug = createSlug(unit.name);
+          if (!subjectData[subSlug].units[unitSlug]) {
+            subjectData[subSlug].units[unitSlug] = {
+              ...extractSidebarFields(unit),
+              chapters: {},
+            };
+          }
+        });
+      });
+
+      // Parallel fetch for all units' chapters
+      const chapterPromises = subjectResults.flatMap(({ sub, units }) =>
+        units.map(async (unit) => {
+          const chapters = await fetchChaptersByUnit(unit._id);
+          return { sub, unit, chapters };
+        })
+      );
+
+      const chapterResults = await Promise.all(chapterPromises);
+
+      // Parallel fetch for all chapters' topics
+      const topicPromises = chapterResults.flatMap(({ sub, unit, chapters }) =>
+        chapters.map(async (chapter) => {
+          const topics = await fetchTopicsByChapter(chapter._id);
+          return { sub, unit, chapter, topics };
+        })
+      );
+
+      const topicResults = await Promise.all(topicPromises);
+
+      // Build data structure - add chapters and topics
+      topicResults.forEach(({ sub, unit, chapter, topics }) => {
+        const subSlug = createSlug(sub.name);
+        const unitSlug = createSlug(unit.name);
+        const chapterSlug = createSlug(chapter.name);
+
+        if (!subjectData[subSlug]?.units[unitSlug]) {
+          subjectData[subSlug].units[unitSlug] = {
+            ...extractSidebarFields(unit),
+            chapters: {},
+          };
+        }
+        subjectData[subSlug].units[unitSlug].chapters[chapterSlug] = {
+          ...extractSidebarFields(chapter),
+          topics: topics.map((t) => ({
+            _id: t._id,
+            name: t.name,
+            orderNumber: t.orderNumber || 0,
+            slug: createSlug(t.name),
+          })),
+        };
+      });
+
+      setSubjectsWithData(subjectData);
+    } catch (error) {
+      console.error("Error loading exam data:", error);
+    } finally {
+      setLoadingExamData(false);
+    }
   }, []);
 
-  // Load exam data when exam slug changes - using context
-  // Only runs when exam slug changes or exams list becomes available
+  // Load exams on mount
+  useEffect(() => {
+    loadExams();
+  }, [loadExams]);
+
+  // Load exam data when exam slug changes
   useEffect(() => {
     // Early return if no exam slug
     if (!memoizedExamSlug) {
       setSelectedExam(null);
-      setSelectedExamId(null);
+      setSubjectsWithData({});
       return;
     }
 
@@ -287,98 +363,30 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       return; // Wait for exams to load
     }
 
-    // Get exam from context
-    const foundExam = getExamBySlug(memoizedExamSlug);
+    // Find exam by slug
+    const foundExam = findByIdOrSlug(exams, memoizedExamSlug);
 
     if (foundExam) {
-      const examId = foundExam._id;
-
-      // Check if this is the same exam we already have selected
-      if (selectedExamId === examId) {
-        // Same exam - check if we need to refresh data
-        const examData = getExamData(examId);
-
-        // If page was refreshed, force reload data
-        if (
-          hasRefreshedRef.current &&
-          examData &&
-          Object.keys(examData).length > 0
-        ) {
-          // Clear the refresh flag and force reload
-          hasRefreshedRef.current = false;
-          // Force reload by clearing cache and reloading
-          if (!isExamDataLoading(examId)) {
-            // Force reload with forceRefresh flag
-            loadExamData(examId, true);
-          }
-        } else if (examData && Object.keys(examData).length > 0) {
-          // Update selectedExam if not set
-          if (!selectedExam || selectedExam._id !== examId) {
-            setSelectedExam(foundExam);
-          }
-          updateExpansionStates(examData, subjectKey, unitKey, chapterKey);
-        }
-        return;
-      }
-
-      // Different exam or first time - update state
+      // Update selected exam
       setSelectedExam(foundExam);
-      setSelectedExamId(examId);
 
-      // Check if data is already loaded for this exam
-      const examData = getExamData(examId);
-
-      // If page was refreshed, always reload data even if cached
-      if (hasRefreshedRef.current) {
-        hasRefreshedRef.current = false;
-        // Force reload on page refresh
-        if (!isExamDataLoading(examId)) {
-          loadExamData(examId, true);
-        }
-      } else if (examData && Object.keys(examData).length > 0) {
-        // Data already loaded - just update expansion states
-        updateExpansionStates(examData, subjectKey, unitKey, chapterKey);
-      } else {
-        // Data not loaded - load it via context (only if not already loading)
-        if (!isExamDataLoading(examId)) {
-          loadExamData(examId);
-        }
-      }
+      // Load exam data if not already loaded
+      loadExamData(foundExam._id);
     } else {
       setSelectedExam(null);
-      setSelectedExamId(null);
+      setSubjectsWithData({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    memoizedExamSlug,
-    exams.length,
-    loadingExams,
-    getExamBySlug,
-    getExamData,
-    loadExamData,
-    isExamDataLoading,
-    selectedExamId,
-  ]);
+  }, [memoizedExamSlug, exams.length, loadingExams]);
 
-  // Update expansion states when path changes (navigation within same exam)
-  // This should NOT trigger data reloading or loading state, just update UI states
+  // Update expansion states when path changes
   useEffect(() => {
-    // Only update if:
-    // 1. Exam is selected and loaded
-    // 2. Data is already loaded for this exam
-    // 3. We have a valid exam slug
-    // 4. Not currently loading
-    // 5. Exams list is loaded (not loading)
     if (
       selectedExam &&
-      selectedExamId === selectedExam._id &&
       Object.keys(subjectsWithData).length > 0 &&
       memoizedExamSlug &&
-      !isLoading &&
-      !loadingExams // Don't update if exams list is still loading
+      !loadingExamData
     ) {
-      // Just update expansion states, no data fetching, no loading state
-      // This ensures smooth navigation without showing loading
       updateExpansionStates(subjectsWithData, subjectKey, unitKey, chapterKey);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -389,25 +397,19 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     topicKey,
     memoizedExamSlug,
     subjectsWithData,
-    isLoading,
-    loadingExams,
+    loadingExamData,
   ]);
 
-  // Memoize handleExamChange to prevent unnecessary re-renders
+  // Handle exam change
   const handleExamChange = useCallback(
     async (exam) => {
       setExamDropdownOpen(false);
 
-      // Set selected exam and exam ID
+      // Set selected exam
       setSelectedExam(exam);
-      setSelectedExamId(exam._id);
 
-      // Check if data is already loaded
-      const examData = getExamData(exam._id);
-      if (!examData || Object.keys(examData).length === 0) {
-        // Load exam data via context
-        loadExamData(exam._id);
-      }
+      // Load exam data
+      await loadExamData(exam._id);
 
       const examSlug = createSlug(exam.name);
       goTo(`/${examSlug}`);
@@ -421,7 +423,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
         onClose();
       }
     },
-    [getExamData, loadExamData, goTo, onClose]
+    [loadExamData, goTo, onClose]
   );
 
   // Memoize handleNavigation to prevent unnecessary re-renders
@@ -504,12 +506,9 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  // Improved loading skeleton - only show if:
-  // 1. Actually loading exam data AND no data loaded yet
-  // 2. OR exams list is loading (first time)
-  // But NOT if data is already cached
+  // Loading skeleton
   const shouldShowLoading =
-    (isLoading && Object.keys(subjectsWithData).length === 0) ||
+    (loadingExamData && Object.keys(subjectsWithData).length === 0) ||
     (loadingExams && exams.length === 0 && !memoizedExamSlug);
 
   if (shouldShowLoading) {
@@ -597,7 +596,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
           <div className="relative px-4 pb-4" ref={dropdownRef}>
             <button
               onClick={() => setExamDropdownOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-expanded={examDropdownOpen}
               aria-haspopup="listbox"
               aria-label="Select exam"
@@ -626,24 +625,31 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-40 overflow-hidden"
+                  className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-40 overflow-hidden max-h-[300px] overflow-y-auto"
                   role="listbox"
+                  style={{ zIndex: 9999 }}
                 >
-                  {exams.map((exam) => (
-                    <button
-                      key={exam._id}
-                      onClick={() => handleExamChange(exam)}
-                      className={`w-full text-left px-4 py-2.5 text-[14px] font-medium transition-colors ${
-                        selectedExam?._id === exam._id
-                          ? "bg-blue-50 text-blue-700 font-semibold"
-                          : "text-gray-700 hover:bg-gray-50"
-                      } focus:outline-none focus:bg-blue-50`}
-                      role="option"
-                      aria-selected={selectedExam?._id === exam._id}
-                    >
-                      {exam.name}
-                    </button>
-                  ))}
+                  {exams.length > 0 ? (
+                    exams.map((exam) => (
+                      <button
+                        key={exam._id}
+                        onClick={() => handleExamChange(exam)}
+                        className={`w-full text-left px-4 py-2.5 text-[14px] font-medium transition-colors ${
+                          selectedExam?._id === exam._id
+                            ? "bg-blue-50 text-blue-700 font-semibold"
+                            : "text-gray-700 hover:bg-gray-50"
+                        } focus:outline-none focus:bg-blue-50`}
+                        role="option"
+                        aria-selected={selectedExam?._id === exam._id}
+                      >
+                        {exam.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2.5 text-sm text-gray-500 text-center">
+                      No exams available
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
