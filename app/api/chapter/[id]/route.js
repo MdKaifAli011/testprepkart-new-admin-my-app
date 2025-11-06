@@ -42,7 +42,7 @@ export async function PUT(request, { params }) {
       return errorResponse("Invalid chapter ID", 400);
     }
 
-    const { name, examId, subjectId, unitId, orderNumber, status, content, title, metaDescription, keywords } = body;
+    const { name, examId, subjectId, unitId, orderNumber, weightage, time, questions, status, content, title, metaDescription, keywords } = body;
 
     // Validate required fields
     if (!name || name.trim() === "") {
@@ -71,6 +71,9 @@ export async function PUT(request, { params }) {
     if (subjectId) updateData.subjectId = subjectId;
     if (unitId) updateData.unitId = unitId;
     if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (weightage !== undefined) updateData.weightage = weightage;
+    if (time !== undefined) updateData.time = time;
+    if (questions !== undefined) updateData.questions = questions;
     if (status) updateData.status = status;
 
     const updatedChapter = await Chapter.findByIdAndUpdate(id, { $set: updateData }, {

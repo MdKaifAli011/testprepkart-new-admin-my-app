@@ -12,6 +12,21 @@ const chapterSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    weightage: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    time: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    questions: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     examId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Exam",

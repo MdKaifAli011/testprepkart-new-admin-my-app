@@ -66,7 +66,7 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, examId, subjectId, unitId, orderNumber, status, content, title, metaDescription, keywords } = body;
+    const { name, examId, subjectId, unitId, orderNumber, weightage, time, questions, status, content, title, metaDescription, keywords } = body;
 
     // Validation
     if (!name || !examId || !subjectId || !unitId) {
@@ -121,6 +121,9 @@ export async function POST(request) {
       subjectId,
       unitId,
       orderNumber: finalOrderNumber,
+      weightage: weightage || 0,
+      time: time || 0,
+      questions: questions || 0,
       status: status || STATUS.ACTIVE,
       content: content || "",
       title: title || "",

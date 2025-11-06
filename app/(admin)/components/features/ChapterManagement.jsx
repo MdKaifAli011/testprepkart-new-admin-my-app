@@ -43,7 +43,7 @@ const ChaptersManagement = () => {
     orderNumber: "",
   });
   const [additionalChapters, setAdditionalChapters] = useState([
-    { id: Date.now(), name: "", orderNumber: 1 },
+    { id: Date.now(), name: "", orderNumber: 1, weightage: 0, time: 0, questions: 0 },
   ]);
   const [nextOrderNumber, setNextOrderNumber] = useState(1);
   const [editFormData, setEditFormData] = useState({
@@ -52,6 +52,9 @@ const ChaptersManagement = () => {
     unitId: "",
     name: "",
     orderNumber: "",
+    weightage: "",
+    time: "",
+    questions: "",
   });
   const [formError, setFormError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -245,7 +248,7 @@ const ChaptersManagement = () => {
       getNextOrderNumber(formData.unitId).then((nextOrder) => {
         setNextOrderNumber(nextOrder);
         setAdditionalChapters([
-          { id: Date.now(), name: "", orderNumber: nextOrder },
+          { id: Date.now(), name: "", orderNumber: nextOrder, weightage: 0, time: 0, questions: 0 },
         ]);
       });
     }
@@ -273,7 +276,7 @@ const ChaptersManagement = () => {
       name: "",
       orderNumber: "",
     });
-    setAdditionalChapters([]);
+    setAdditionalChapters([{ id: Date.now(), name: "", orderNumber: 1, weightage: 0, time: 0, questions: 0 }]);
     setNextOrderNumber(1);
     setFormError(null);
     setShowAddForm(false);
@@ -288,7 +291,7 @@ const ChaptersManagement = () => {
       name: "",
       orderNumber: "",
     });
-    setAdditionalChapters([]);
+    setAdditionalChapters([{ id: Date.now(), name: "", orderNumber: 1, weightage: 0, time: 0, questions: 0 }]);
     setNextOrderNumber(1);
     setFormError(null);
   };
@@ -297,7 +300,7 @@ const ChaptersManagement = () => {
     const nextOrder = nextOrderNumber + additionalChapters.length;
     setAdditionalChapters((prev) => [
       ...prev,
-      { id: Date.now(), name: "", orderNumber: nextOrder },
+      { id: Date.now(), name: "", orderNumber: nextOrder, weightage: 0, time: 0, questions: 0 },
     ]);
   };
 
@@ -347,6 +350,9 @@ const ChaptersManagement = () => {
         subjectId: formData.subjectId,
         unitId: formData.unitId,
         orderNumber: chapter.orderNumber || nextOrderNumber + index,
+        weightage: chapter.weightage || 0,
+        time: chapter.time || 0,
+        questions: chapter.questions || 0,
       }));
 
       // Create chapters one by one
@@ -399,7 +405,10 @@ const ChaptersManagement = () => {
       examId: chapterToEdit.examId._id || chapterToEdit.examId,
       subjectId: chapterToEdit.subjectId._id || chapterToEdit.subjectId,
       unitId: chapterToEdit.unitId._id || chapterToEdit.unitId,
-      orderNumber: chapterToEdit.orderNumber,
+      orderNumber: chapterToEdit.orderNumber || "",
+      weightage: chapterToEdit.weightage || 0,
+      time: chapterToEdit.time || 0,
+      questions: chapterToEdit.questions || 0,
     });
     setShowEditForm(true);
     setFormError(null);
@@ -421,6 +430,9 @@ const ChaptersManagement = () => {
       unitId: "",
       name: "",
       orderNumber: "",
+      weightage: "",
+      time: "",
+      questions: "",
     });
     setFormError(null);
     setShowEditForm(false);
@@ -452,6 +464,9 @@ const ChaptersManagement = () => {
         orderNumber: editFormData.orderNumber
           ? parseInt(editFormData.orderNumber)
           : undefined,
+        weightage: editFormData.weightage ? parseFloat(editFormData.weightage) : 0,
+        time: editFormData.time ? parseInt(editFormData.time) : 0,
+        questions: editFormData.questions ? parseInt(editFormData.questions) : 0,
       });
 
       if (response.data.success) {
@@ -470,6 +485,9 @@ const ChaptersManagement = () => {
           unitId: "",
           name: "",
           orderNumber: "",
+          weightage: "",
+          time: "",
+          questions: "",
         });
         setShowEditForm(false);
         setEditingChapter(null);
@@ -806,11 +824,7 @@ const ChaptersManagement = () => {
                 {additionalChapters.map((chapter, index) => (
                   <div
                     key={chapter.id}
-                    className={`grid gap-2 ${
-                      additionalChapters.length === 1
-                        ? "grid-cols-1 md:grid-cols-2"
-                        : "grid-cols-1 md:grid-cols-3"
-                    }`}
+                    className="grid grid-cols-1 md:grid-cols-5 gap-2"
                   >
                     {/* Chapter Name */}
                     <div className="space-y-2 px-2">
@@ -862,9 +876,85 @@ const ChaptersManagement = () => {
                       />
                     </div>
 
+                    {/* Weightage (%) */}
+                    <div className="space-y-2 px-2">
+                      <label
+                        htmlFor={`chapter-weightage-${chapter.id}`}
+                        className="block text-xs font-semibold text-gray-700"
+                      >
+                        Weightage (%)
+                      </label>
+                      <input
+                        type="number"
+                        id={`chapter-weightage-${chapter.id}`}
+                        value={chapter.weightage || 0}
+                        onChange={(e) =>
+                          handleChapterChange(
+                            chapter.id,
+                            "weightage",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        min="0"
+                        step="0.1"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                        disabled={isFormLoading}
+                      />
+                    </div>
+
+                    {/* Time (min) */}
+                    <div className="space-y-2 px-2">
+                      <label
+                        htmlFor={`chapter-time-${chapter.id}`}
+                        className="block text-xs font-semibold text-gray-700"
+                      >
+                        Time (min)
+                      </label>
+                      <input
+                        type="number"
+                        id={`chapter-time-${chapter.id}`}
+                        value={chapter.time || 0}
+                        onChange={(e) =>
+                          handleChapterChange(
+                            chapter.id,
+                            "time",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        min="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                        disabled={isFormLoading}
+                      />
+                    </div>
+
+                    {/* Questions */}
+                    <div className="space-y-2 px-2">
+                      <label
+                        htmlFor={`chapter-questions-${chapter.id}`}
+                        className="block text-xs font-semibold text-gray-700"
+                      >
+                        Questions
+                      </label>
+                      <input
+                        type="number"
+                        id={`chapter-questions-${chapter.id}`}
+                        value={chapter.questions || 0}
+                        onChange={(e) =>
+                          handleChapterChange(
+                            chapter.id,
+                            "questions",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                        min="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                        disabled={isFormLoading}
+                      />
+                    </div>
+
                     {/* Remove Button */}
                     {additionalChapters.length > 1 && (
-                      <div className="space-y-2 px-2 flex items-end">
+                      <div className="space-y-2 px-2 md:col-span-5 flex items-end">
                         <button
                           type="button"
                           onClick={() => handleRemoveChapter(chapter.id)}
@@ -987,6 +1077,67 @@ const ChaptersManagement = () => {
                     min="1"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
                     required
+                    disabled={isFormLoading}
+                  />
+                </div>
+
+                {/* Weightage (%) */}
+                <div className="space-y-2 px-2">
+                  <label
+                    htmlFor="editWeightage"
+                    className="block text-sm font-semibold text-gray-700"
+                  >
+                    Weightage (%)
+                  </label>
+                  <input
+                    type="number"
+                    id="editWeightage"
+                    name="weightage"
+                    value={editFormData.weightage}
+                    onChange={handleEditFormChange}
+                    min="0"
+                    step="0.1"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                    disabled={isFormLoading}
+                  />
+                </div>
+
+                {/* Time (min) */}
+                <div className="space-y-2 px-2">
+                  <label
+                    htmlFor="editTime"
+                    className="block text-sm font-semibold text-gray-700"
+                  >
+                    Time (min)
+                  </label>
+                  <input
+                    type="number"
+                    id="editTime"
+                    name="time"
+                    value={editFormData.time}
+                    onChange={handleEditFormChange}
+                    min="0"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                    disabled={isFormLoading}
+                  />
+                </div>
+
+                {/* Questions */}
+                <div className="space-y-2 px-2">
+                  <label
+                    htmlFor="editQuestions"
+                    className="block text-sm font-semibold text-gray-700"
+                  >
+                    Questions
+                  </label>
+                  <input
+                    type="number"
+                    id="editQuestions"
+                    name="questions"
+                    value={editFormData.questions}
+                    onChange={handleEditFormChange}
+                    min="0"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
                     disabled={isFormLoading}
                   />
                 </div>
