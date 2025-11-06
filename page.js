@@ -43,33 +43,15 @@ const AdminDashboard = () => {
         setError(null);
 
         // Fetch all data in parallel
-        const [
-          examsRes,
-          subjectsRes,
-          unitsRes,
-          chaptersRes,
-          topicsRes,
-          subtopicsRes,
-        ] = await Promise.all([
-          api
-            .get("/exam?limit=1000&status=all")
-            .catch(() => ({ data: { data: [] } })),
-          api
-            .get("/subject?limit=1000&status=all")
-            .catch(() => ({ data: { data: [] } })),
-          api
-            .get("/unit?limit=1000&status=all")
-            .catch(() => ({ data: { data: [] } })),
-          api
-            .get("/chapter?limit=1000&status=all")
-            .catch(() => ({ data: { data: [] } })),
-          api
-            .get("/topic?limit=1000&status=all")
-            .catch(() => ({ data: { data: [] } })),
-          api
-            .get("/subtopic?limit=1000&status=all")
-            .catch(() => ({ data: { data: [] } })),
-        ]);
+        const [examsRes, subjectsRes, unitsRes, chaptersRes, topicsRes, subtopicsRes] =
+          await Promise.all([
+            api.get("/exam?limit=1000&status=all").catch(() => ({ data: { data: [] } })),
+            api.get("/subject?limit=1000&status=all").catch(() => ({ data: { data: [] } })),
+            api.get("/unit?limit=1000&status=all").catch(() => ({ data: { data: [] } })),
+            api.get("/chapter?limit=1000&status=all").catch(() => ({ data: { data: [] } })),
+            api.get("/topic?limit=1000&status=all").catch(() => ({ data: { data: [] } })),
+            api.get("/subtopic?limit=1000&status=all").catch(() => ({ data: { data: [] } })),
+          ]);
 
         const exams = examsRes.data?.data || [];
         const subjects = subjectsRes.data?.data || [];
@@ -79,25 +61,14 @@ const AdminDashboard = () => {
         const subtopics = subtopicsRes.data?.data || [];
 
         const activeExams = exams.filter((e) => e.status === "active").length;
-        const activeSubjects = subjects.filter(
-          (s) => s.status === "active"
-        ).length;
+        const activeSubjects = subjects.filter((s) => s.status === "active").length;
         const activeUnits = units.filter((u) => u.status === "active").length;
-        const activeChapters = chapters.filter(
-          (c) => c.status === "active"
-        ).length;
+        const activeChapters = chapters.filter((c) => c.status === "active").length;
         const activeTopics = topics.filter((t) => t.status === "active").length;
-        const activeSubtopics = subtopics.filter(
-          (st) => st.status === "active"
-        ).length;
+        const activeSubtopics = subtopics.filter((st) => st.status === "active").length;
 
         const totalActive =
-          activeExams +
-          activeSubjects +
-          activeUnits +
-          activeChapters +
-          activeTopics +
-          activeSubtopics;
+          activeExams + activeSubjects + activeUnits + activeChapters + activeTopics + activeSubtopics;
         const totalInactive =
           exams.length +
           subjects.length +
@@ -120,24 +91,9 @@ const AdminDashboard = () => {
 
         // Generate recent activity (mock data for now)
         setRecentActivity([
-          {
-            type: "exam",
-            action: "created",
-            name: exams[0]?.name || "New Exam",
-            time: "2 hours ago",
-          },
-          {
-            type: "subject",
-            action: "updated",
-            name: subjects[0]?.name || "Updated Subject",
-            time: "5 hours ago",
-          },
-          {
-            type: "unit",
-            action: "created",
-            name: units[0]?.name || "New Unit",
-            time: "1 day ago",
-          },
+          { type: "exam", action: "created", name: exams[0]?.name || "New Exam", time: "2 hours ago" },
+          { type: "subject", action: "updated", name: subjects[0]?.name || "Updated Subject", time: "5 hours ago" },
+          { type: "unit", action: "created", name: units[0]?.name || "New Unit", time: "1 day ago" },
         ]);
       } catch (err) {
         console.error("Error fetching stats:", err);
@@ -263,7 +219,7 @@ const AdminDashboard = () => {
   if (error) {
     return (
       <MainLayout>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       </MainLayout>
@@ -272,24 +228,23 @@ const AdminDashboard = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">
+              <h1 className="text-3xl font-semibold text-gray-900 mb-2">
                 Welcome to Admin Dashboard
               </h1>
               <p className="text-sm text-gray-600">
-                Manage your content, track statistics, and oversee your learning
-                portal
+                Manage your content, track statistics, and oversee your learning portal
               </p>
             </div>
-            <div className="hidden md:flex items-center gap-3 bg-white rounded-lg px-4 py-3 shadow-sm border border-gray-200">
-              <FaChartLine className="text-2xl text-blue-600" />
+            <div className="hidden md:flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+              <FaChartLine className="text-lg text-gray-600" />
               <div>
-                <div className="text-xs text-gray-500">Total Content Items</div>
-                <div className="text-xl font-semibold text-gray-900">
+                <div className="text-xs font-medium text-gray-500">Total Content Items</div>
+                <div className="text-lg font-semibold text-gray-900">
                   {stats.active + stats.inactive}
                 </div>
               </div>
@@ -307,22 +262,18 @@ const AdminDashboard = () => {
                 className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg ${card.bgColor}`}>
-                    <Icon className={`text-xl ${card.textColor}`} />
+                  <div className="p-3 rounded-lg bg-gray-100">
+                    <Icon className="text-xl text-gray-600" />
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-semibold text-gray-900">
-                      {card.value}
-                    </div>
-                    <div className="text-sm text-gray-600">{card.title}</div>
+                    <div className="text-3xl font-semibold text-gray-900">{card.value}</div>
+                    <div className="text-sm text-gray-500">{card.title}</div>
                   </div>
                 </div>
                 <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full bg-gradient-to-r ${card.color} rounded-full transition-all duration-500`}
-                    style={{
-                      width: `${Math.min((card.value / 100) * 100, 100)}%`,
-                    }}
+                    className="h-full bg-gray-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((card.value / 100) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -331,14 +282,10 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Links */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Quick Access
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">Manage your content</p>
-            </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Quick Access</h2>
+            <span className="text-sm text-gray-500">Manage your content</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {quickLinks.map((link, index) => {
@@ -347,22 +294,20 @@ const AdminDashboard = () => {
                 <Link
                   key={index}
                   href={link.href}
-                  className="group relative bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md hover:border-blue-300 transition-all duration-200"
+                  className="group bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md hover:border-gray-300 transition-all"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div
-                      className={`p-3 rounded-lg ${link.bgColor} transition-colors`}
-                    >
-                      <Icon className={`text-xl ${link.textColor}`} />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-gray-100">
+                      <Icon className="text-lg text-gray-600" />
                     </div>
-                    <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
                       {link.count}
                     </span>
                   </div>
                   <h3 className="text-base font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                     {link.name}
                   </h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 group-hover:text-blue-600 transition-colors">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 group-hover:text-gray-700 transition-colors">
                     <span>Manage</span>
                     <FaArrowRight className="text-xs group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -375,12 +320,10 @@ const AdminDashboard = () => {
         {/* Recent Activity & Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activity */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Recent Activity
-              </h2>
-              <FaClock className="text-gray-400" />
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
+              <FaClock className="text-gray-400 text-base" />
             </div>
             <div className="space-y-3">
               {recentActivity.length > 0 ? (
@@ -389,102 +332,74 @@ const AdminDashboard = () => {
                     key={index}
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <FaCheckCircle className="text-blue-600 text-sm" />
+                    <div className="p-2 bg-gray-200 rounded-lg">
+                      <FaCheckCircle className="text-gray-600 text-sm" />
                     </div>
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-900">
                         {activity.name} {activity.action}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {activity.time}
-                      </div>
+                      <div className="text-xs text-gray-500">{activity.time}</div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <FaClock className="text-4xl mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm">No recent activity</p>
+                <div className="text-center py-8 text-gray-500">
+                  <FaClock className="text-3xl mx-auto mb-2 text-gray-300" />
+                  <p>No recent activity</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Content Summary */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Content Summary
-              </h2>
-              <FaTrophy className="text-gray-400" />
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Content Summary</h2>
+              <FaTrophy className="text-gray-400 text-base" />
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <FaGraduationCap className="text-blue-600" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Exams
-                  </span>
+                  <FaGraduationCap className="text-gray-600 text-base" />
+                  <span className="text-sm font-medium text-gray-900">Exams</span>
                 </div>
-                <span className="text-lg font-semibold text-blue-600">
-                  {stats.exams}
-                </span>
+                <span className="text-base font-semibold text-gray-900">{stats.exams}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <FaBook className="text-purple-600" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Subjects
-                  </span>
+                  <FaBook className="text-gray-600 text-base" />
+                  <span className="text-sm font-medium text-gray-900">Subjects</span>
                 </div>
-                <span className="text-lg font-semibold text-purple-600">
-                  {stats.subjects}
-                </span>
+                <span className="text-base font-semibold text-gray-900">{stats.subjects}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <FaLayerGroup className="text-indigo-600" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Units
-                  </span>
+                  <FaLayerGroup className="text-gray-600 text-base" />
+                  <span className="text-sm font-medium text-gray-900">Units</span>
                 </div>
-                <span className="text-lg font-semibold text-indigo-600">
-                  {stats.units}
-                </span>
+                <span className="text-base font-semibold text-gray-900">{stats.units}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <FaRegFolderOpen className="text-green-600" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Chapters
-                  </span>
+                  <FaRegFolderOpen className="text-gray-600 text-base" />
+                  <span className="text-sm font-medium text-gray-900">Chapters</span>
                 </div>
-                <span className="text-lg font-semibold text-green-600">
-                  {stats.chapters}
-                </span>
+                <span className="text-base font-semibold text-gray-900">{stats.chapters}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <FaRegFolderOpen className="text-yellow-600" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Topics
-                  </span>
+                  <FaRegFolderOpen className="text-gray-600 text-base" />
+                  <span className="text-sm font-medium text-gray-900">Topics</span>
                 </div>
-                <span className="text-lg font-semibold text-yellow-600">
-                  {stats.topics}
-                </span>
+                <span className="text-base font-semibold text-gray-900">{stats.topics}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-pink-50 rounded-lg border border-pink-100">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <FaRegFolderOpen className="text-pink-600" />
-                  <span className="text-sm font-medium text-gray-900">
-                    Sub Topics
-                  </span>
+                  <FaRegFolderOpen className="text-gray-600 text-base" />
+                  <span className="text-sm font-medium text-gray-900">Sub Topics</span>
                 </div>
-                <span className="text-lg font-semibold text-pink-600">
-                  {stats.subtopics}
-                </span>
+                <span className="text-base font-semibold text-gray-900">{stats.subtopics}</span>
               </div>
             </div>
           </div>

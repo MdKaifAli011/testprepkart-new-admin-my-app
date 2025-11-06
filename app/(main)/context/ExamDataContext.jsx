@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import {
   fetchExams,
   fetchSubjectsByExam,
@@ -30,29 +37,43 @@ export const ExamDataProvider = ({ children }) => {
   const [selectedExamId, setSelectedExamId] = useState(null);
   const loadingRef = useRef({}); // Track which exams are currently loading
 
-  // Load all exams (only once)
-  const loadExams = useCallback(async () => {
-    if (exams.length > 0) return; // Already loaded
-    setLoadingExams(true);
-    try {
-      const fetchedExams = await fetchExams();
-      setExams(fetchedExams);
-    } catch (error) {
-      logger.error("Error loading exams:", error);
-    } finally {
-      setLoadingExams(false);
-    }
-  }, [exams.length]);
+  // Load all exams (only once, unless force refresh)
+  const loadExams = useCallback(
+    async (forceRefresh = false) => {
+      if (!forceRefresh && exams.length > 0) return; // Already loaded
+      setLoadingExams(true);
+      try {
+        const fetchedExams = await fetchExams();
+        setExams(fetchedExams);
+      } catch (error) {
+        logger.error("Error loading exams:", error);
+      } finally {
+        setLoadingExams(false);
+      }
+    },
+    [exams.length]
+  );
 
   // Load full exam data tree - optimized with parallel requests
   // Only loads once per exam, caches data for reuse
   const loadExamData = useCallback(
-    async (examId) => {
+    async (examId, forceRefresh = false) => {
       if (!examId) return;
 
-      // Check if data is already loaded or currently loading
-      if (examDataCache[examId] || loadingRef.current[examId]) {
-        return; // Already loaded or loading
+      // If force refresh, clear cache for this exam
+      if (forceRefresh) {
+        setExamDataCache((prev) => {
+          const newCache = { ...prev };
+          delete newCache[examId];
+          return newCache;
+        });
+        loadingRef.current[examId] = false;
+        // Continue to load fresh data below
+      } else {
+        // Check if data is already loaded or currently loading (only if not forcing refresh)
+        if (examDataCache[examId] || loadingRef.current[examId]) {
+          return; // Already loaded or loading
+        }
       }
 
       // Mark as loading
@@ -200,7 +221,7 @@ export const ExamDataProvider = ({ children }) => {
     loadingExams,
     selectedExamId,
     setSelectedExamId,
-    
+
     // Functions
     loadExams,
     loadExamData,
@@ -215,4 +236,3 @@ export const ExamDataProvider = ({ children }) => {
     </ExamDataContext.Provider>
   );
 };
-

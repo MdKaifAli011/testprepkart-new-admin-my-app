@@ -273,7 +273,7 @@ const TopicPage = () => {
                   <div>
                     {topic?.content ? (
                       <div
-                        className="prose prose-sm max-w-none"
+                        className="rich-text-content prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{
                           __html: topic.content,
                         }}

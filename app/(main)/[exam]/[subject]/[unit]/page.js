@@ -225,7 +225,7 @@ const UnitPage = () => {
                     <div className="space-y-4">
                       {unit?.content ? (
                         <div
-                          className="prose prose-sm max-w-none"
+                          className="rich-text-content prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: unit.content,
                           }}

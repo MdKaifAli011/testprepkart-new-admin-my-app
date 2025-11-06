@@ -244,7 +244,7 @@ const ChapterPage = () => {
                   <div>
                     {chapter?.content ? (
                       <div
-                        className="prose prose-sm max-w-none"
+                        className="rich-text-content prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{
                           __html: chapter.content,
                         }}

@@ -97,3 +97,147 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+/* Rich Text Editor Content Styles - Shared between editor and rendered content */
+.rich-text-content {
+  outline: none;
+}
+
+.rich-text-content h1 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1.5rem 0 1rem 0;
+  color: #111827;
+}
+
+.rich-text-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 1.25rem 0 0.75rem 0;
+  color: #111827;
+}
+
+.rich-text-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 1rem 0 0.5rem 0;
+  color: #111827;
+}
+
+.rich-text-content p {
+  margin: 0.75rem 0;
+  line-height: 1.75;
+  font-size: 1rem;
+  color: #4b5563;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.rich-text-content li {
+  margin: 0.5rem 0;
+}
+
+.rich-text-content blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: #4b5563;
+  background: #f9fafb;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+}
+
+.rich-text-content pre {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 1.5rem 0;
+}
+
+.rich-text-content code {
+  background: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 0.875em;
+}
+
+.rich-text-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.rich-text-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.rich-text-content th,
+.rich-text-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.rich-text-content th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  color: #111827;
+}
+
+.rich-text-content tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.rich-text-content tr:hover {
+  background-color: #f3f4f6;
+}
+
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1rem 0;
+  display: block;
+}
+
+.rich-text-content a {
+  color: #2563eb;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.rich-text-content a:hover {
+  color: #1d4ed8;
+}
+
+.rich-text-content .button-like {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  display: inline-block;
+  margin: 0.25rem 0;
+}
+
+.rich-text-content .button-like:hover {
+  opacity: 0.9;
+}

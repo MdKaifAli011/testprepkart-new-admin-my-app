@@ -565,59 +565,53 @@ const UnitsManagement = () => {
   return (
     <>
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-6">
         {/* Page Header */}
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl shadow-lg border border-gray-200/50 p-4 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="space-y-2">
-              <h1 className="text-xl sm:text-2xl lg:text-2xl font-bold text-gray-900 tracking-tight">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
                 Units Management
               </h1>
-              <p className="text-gray-600 text-xs">
-                Manage and organize your units, create new units, and track unit
-                performance across your educational platform.
+              <p className="text-sm text-gray-600">
+                Manage and organize your units, create new units, and track unit performance across your educational platform.
               </p>
             </div>
             <button
               onClick={handleOpenAddForm}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <FaPlus className="w-4 h-4" />
-              <span className="text-xs">Add New Units</span>
+              <span>Add New Units</span>
             </button>
           </div>
         </div>
 
         {/* Add Units Form */}
         {showAddForm && (
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-3 animate-fadeIn">
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FaPlus className="size-3 text-blue-600" />
-                </div>
-                <h2 className="text-sm font-bold text-gray-900">
-                  Add New Units
-                </h2>
-              </div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Add New Units
+              </h2>
               <button
                 onClick={handleCancelForm}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-all duration-200"
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
                 disabled={isFormLoading}
               >
-                <FaTimes className="size-3" />
+                <FaTimes className="w-4 h-4" />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleAddUnits} className="space-y-2 mt-3 px-2">
+            <form onSubmit={handleAddUnits} className="space-y-4">
               {/* Form Error Display */}
               {formError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center animate-fadeIn">
-                  <div className="flex items-center gap-2 justify-center">
-                    <div className="size-2 bg-red-500 rounded-full"></div>
-                    <p className="text-xs font-medium text-red-800">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <p className="text-sm font-medium text-red-800">
                       {formError}
                     </p>
                   </div>
@@ -625,12 +619,12 @@ const UnitsManagement = () => {
               )}
 
               {/* Exam + Subject */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Exam Select */}
-                <div className="space-y-2 px-2">
+                <div className="space-y-2">
                   <label
                     htmlFor="examId"
-                    className="block text-sm font-semibold text-gray-700"
+                    className="block text-sm font-medium text-gray-700"
                   >
                     Select Exam <span className="text-red-500">*</span>
                   </label>
@@ -639,7 +633,7 @@ const UnitsManagement = () => {
                     name="examId"
                     value={formData.examId}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
                     required
                     disabled={isFormLoading}
                   >
@@ -653,10 +647,10 @@ const UnitsManagement = () => {
                 </div>
 
                 {/* Subject Select */}
-                <div className="space-y-2 px-2">
+                <div className="space-y-2">
                   <label
                     htmlFor="subjectId"
-                    className="block text-sm font-semibold text-gray-700"
+                    className="block text-sm font-medium text-gray-700"
                   >
                     Select Subject <span className="text-red-500">*</span>
                   </label>
@@ -665,7 +659,7 @@ const UnitsManagement = () => {
                     name="subjectId"
                     value={formData.subjectId}
                     onChange={handleFormChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-sm hover:border-gray-400"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
                     required
                     disabled={isFormLoading}
                   >
@@ -768,18 +762,18 @@ const UnitsManagement = () => {
               </div>
 
               {/* Form Actions */}
-              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleCancelForm}
-                  className="w-24 py-2 px-4 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
                   disabled={isFormLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   disabled={isFormLoading}
                 >
                   {isFormLoading ? (
@@ -789,7 +783,7 @@ const UnitsManagement = () => {
                     </>
                   ) : (
                     <>
-                      <FaSave className="size-3" />
+                      <FaSave className="w-4 h-4" />
                       <span>Add Units</span>
                     </>
                   )}
@@ -801,32 +795,27 @@ const UnitsManagement = () => {
 
         {/* Edit Unit Form */}
         {showEditForm && (
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-3 animate-fadeIn">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FaEdit className="size-3 text-blue-600" />
-                </div>
-                <h2 className="text-sm font-bold text-gray-900">
-                  Edit Unit: {editingUnit?.name}
-                </h2>
-              </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Edit Unit: {editingUnit?.name}
+              </h2>
               <button
                 onClick={handleCancelEditForm}
-                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-all duration-200"
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
                 disabled={isFormLoading}
               >
-                <FaTimes className="size-3" />
+                <FaTimes className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleUpdateUnit} className="space-y-2 mt-3 px-2">
+            <form onSubmit={handleUpdateUnit} className="space-y-4">
               {/* Form Error Display */}
               {formError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center animate-fadeIn">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex items-center gap-2">
-                    <div className="size-2 bg-red-500 rounded-full"></div>
-                    <p className="text-xs font-medium text-red-800 text-center">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <p className="text-sm font-medium text-red-800">
                       {formError}
                     </p>
                   </div>
@@ -935,18 +924,18 @@ const UnitsManagement = () => {
               </div>
 
               {/* Form Actions */}
-              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={handleCancelEditForm}
-                  className="w-24 py-2 px-4 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
                   disabled={isFormLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:scale-105 active:scale-95"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   disabled={isFormLoading}
                 >
                   {isFormLoading ? (
@@ -956,7 +945,7 @@ const UnitsManagement = () => {
                     </>
                   ) : (
                     <>
-                      <FaSave className="size-3" />
+                      <FaSave className="w-4 h-4" />
                       <span>Update Unit</span>
                     </>
                   )}
@@ -967,47 +956,31 @@ const UnitsManagement = () => {
         )}
 
         {/* Content Area */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900">
                   Units List
                 </h2>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1">
                   Manage your units, view details, and perform actions. You can
                   drag to reorder units.
                 </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                Last updated: {new Date().toLocaleTimeString()}
               </div>
             </div>
           </div>
 
           {/* Filter Button */}
-          <div className="px-4 py-3 border-b border-gray-200">
+          <div className="px-6 py-3 border-b border-gray-200">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <FaFilter className="w-4 h-4" />
               Filter Units
               {activeFilterCount > 0 && (
-                <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-medium">
                   {activeFilterCount}
                 </span>
               )}
@@ -1016,7 +989,7 @@ const UnitsManagement = () => {
 
           {/* Filter Section */}
           {showFilters && (
-            <div className="px-4 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 animate-fadeIn">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {/* Filter by Exam */}
                 <div className="space-y-2">
@@ -1070,7 +1043,7 @@ const UnitsManagement = () => {
                     Active Filters:
                   </span>
                   {filterExam && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Exam:{" "}
                       {exams.find((e) => e._id === filterExam)?.name || "N/A"}
                       <button
@@ -1078,20 +1051,20 @@ const UnitsManagement = () => {
                           setFilterExam("");
                           setFilterSubject("");
                         }}
-                        className="hover:bg-green-200 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                       >
                         <FaTimes className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   {filterSubject && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Subject:{" "}
                       {subjects.find((s) => s._id === filterSubject)?.name ||
                         "N/A"}
                       <button
                         onClick={() => setFilterSubject("")}
-                        className="hover:bg-purple-200 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                       >
                         <FaTimes className="w-3 h-3" />
                       </button>
@@ -1099,7 +1072,7 @@ const UnitsManagement = () => {
                   )}
                   <button
                     onClick={clearFilters}
-                    className="ml-auto px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full text-xs font-semibold transition-colors"
+                    className="ml-auto px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full text-xs font-medium transition-colors"
                   >
                     Clear All Filters
                   </button>
@@ -1108,7 +1081,7 @@ const UnitsManagement = () => {
             </div>
           )}
 
-          <div className="p-4">
+          <div className="p-6">
             {isDataLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
@@ -1132,14 +1105,14 @@ const UnitsManagement = () => {
                 {activeFilterCount > 0 ? (
                   <button
                     onClick={clearFilters}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     Clear Filters
                   </button>
                 ) : (
                   <button
                     onClick={handleOpenAddForm}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                   >
                     <FaPlus className="w-4 h-4" />
                     Create Your First Units

@@ -24,6 +24,8 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   const dropdownRef = useRef(null);
   const sidebarRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const isInitialMountRef = useRef(true);
+  const hasRefreshedRef = useRef(false);
 
   // Use ExamDataContext instead of local state
   const {
@@ -32,6 +34,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     loadingExams,
     selectedExamId,
     setSelectedExamId,
+    loadExams,
     loadExamData,
     getExamBySlug,
     getExamData,
@@ -44,7 +47,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   // Memoize path segments to prevent unnecessary re-renders
-  const pathSegments = useMemo(() => pathname.toLowerCase().split("/").filter(Boolean), [pathname]);
+  const pathSegments = useMemo(
+    () => pathname.toLowerCase().split("/").filter(Boolean),
+    [pathname]
+  );
   const currentExamSlug = useMemo(() => pathSegments[0], [pathSegments]);
   const pathKeys = useMemo(() => {
     const keys = pathSegments.slice(1);
@@ -55,9 +61,9 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       topicKey: keys[3],
     };
   }, [pathSegments]);
-  
+
   const { subjectKey, unitKey, chapterKey, topicKey } = pathKeys;
-  
+
   // Memoize exam slug to prevent unnecessary re-renders
   const memoizedExamSlug = useMemo(() => currentExamSlug, [currentExamSlug]);
 
@@ -71,9 +77,12 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   }, []);
 
   // Memoize goTo function to prevent unnecessary re-renders
-  const goTo = useCallback((path) => {
-    router.push(path);
-  }, [router]);
+  const goTo = useCallback(
+    (path) => {
+      router.push(path);
+    },
+    [router]
+  );
 
   // Debounced search handler
   const handleSearchChange = (value) => {
@@ -96,10 +105,13 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   }, []);
 
   // Filter function to check if item matches search query
-  const matchesSearch = useCallback((text) => {
-    if (!debouncedSearchQuery.trim()) return true;
-    return text?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-  }, [debouncedSearchQuery]);
+  const matchesSearch = useCallback(
+    (text) => {
+      if (!debouncedSearchQuery.trim()) return true;
+      return text?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+    },
+    [debouncedSearchQuery]
+  );
 
   // Get current exam data from context
   const subjectsWithData = useMemo(() => {
@@ -181,51 +193,54 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   }, [debouncedSearchQuery, filteredSubjectsData]);
 
   // Update expansion states based on current path (without reloading data)
-  const updateExpansionStates = useCallback((data, currentSubjectKey, currentUnitKey, currentChapterKey) => {
-    const dataToUse = data || subjectsWithData;
-    if (!dataToUse || Object.keys(dataToUse).length === 0) return;
+  const updateExpansionStates = useCallback(
+    (data, currentSubjectKey, currentUnitKey, currentChapterKey) => {
+      const dataToUse = data || subjectsWithData;
+      if (!dataToUse || Object.keys(dataToUse).length === 0) return;
 
-    const newSubs = {},
-      newUnits = {},
-      newChaps = {};
+      const newSubs = {},
+        newUnits = {},
+        newChaps = {};
 
-    // If there's a subjectKey in the path, expand based on path
-    if (currentSubjectKey) {
-      Object.entries(dataToUse).forEach(([sKey, sVal]) => {
-        if (sKey === currentSubjectKey) {
-          newSubs[sKey] = true;
-          Object.entries(sVal.units || {}).forEach(([uKey, uVal]) => {
-            if (uKey === currentUnitKey) {
-              newUnits[uKey] = true;
-              Object.entries(uVal.chapters || {}).forEach(([cKey]) => {
-                if (cKey === currentChapterKey) {
-                  newChaps[cKey] = true;
-                }
-              });
-            }
-          });
-        }
-      });
-    } else {
-      // If no subjectKey in path, auto-expand first subject and its first unit
-      const subjectEntries = Object.entries(dataToUse);
-      if (subjectEntries.length > 0) {
-        const [firstSubjectKey, firstSubject] = subjectEntries[0];
-        newSubs[firstSubjectKey] = true;
+      // If there's a subjectKey in the path, expand based on path
+      if (currentSubjectKey) {
+        Object.entries(dataToUse).forEach(([sKey, sVal]) => {
+          if (sKey === currentSubjectKey) {
+            newSubs[sKey] = true;
+            Object.entries(sVal.units || {}).forEach(([uKey, uVal]) => {
+              if (uKey === currentUnitKey) {
+                newUnits[uKey] = true;
+                Object.entries(uVal.chapters || {}).forEach(([cKey]) => {
+                  if (cKey === currentChapterKey) {
+                    newChaps[cKey] = true;
+                  }
+                });
+              }
+            });
+          }
+        });
+      } else {
+        // If no subjectKey in path, auto-expand first subject and its first unit
+        const subjectEntries = Object.entries(dataToUse);
+        if (subjectEntries.length > 0) {
+          const [firstSubjectKey, firstSubject] = subjectEntries[0];
+          newSubs[firstSubjectKey] = true;
 
-        // Also expand first unit of the first subject
-        const unitEntries = Object.entries(firstSubject.units || {});
-        if (unitEntries.length > 0) {
-          const [firstUnitKey] = unitEntries[0];
-          newUnits[firstUnitKey] = true;
+          // Also expand first unit of the first subject
+          const unitEntries = Object.entries(firstSubject.units || {});
+          if (unitEntries.length > 0) {
+            const [firstUnitKey] = unitEntries[0];
+            newUnits[firstUnitKey] = true;
+          }
         }
       }
-    }
 
-    setExpandedSubjects((prev) => ({ ...prev, ...newSubs }));
-    setExpandedUnits((prev) => ({ ...prev, ...newUnits }));
-    setExpandedChapters((prev) => ({ ...prev, ...newChaps }));
-  }, [subjectsWithData]); // Dependencies include subjectsWithData
+      setExpandedSubjects((prev) => ({ ...prev, ...newSubs }));
+      setExpandedUnits((prev) => ({ ...prev, ...newUnits }));
+      setExpandedChapters((prev) => ({ ...prev, ...newChaps }));
+    },
+    [subjectsWithData]
+  ); // Dependencies include subjectsWithData
 
   // Check if currently loading exam data
   const isLoading = useMemo(() => {
@@ -233,6 +248,29 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     if (loadingExams || !selectedExamId) return false;
     return isExamDataLoading(selectedExamId);
   }, [selectedExamId, isExamDataLoading, loadingExams]);
+
+  // Detect page refresh and force data reload
+  useEffect(() => {
+    // Check if this is a page refresh (not initial mount)
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+
+      // Check if it's a page refresh using performance API
+      const isPageRefresh =
+        typeof window !== "undefined" &&
+        (performance.navigation?.type === 1 || // TYPE_RELOAD
+          performance.getEntriesByType?.("navigation")[0]?.type === "reload");
+
+      if (isPageRefresh) {
+        hasRefreshedRef.current = true;
+        // Force reload exams list on page refresh
+        if (exams.length > 0) {
+          loadExams(true);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load exam data when exam slug changes - using context
   // Only runs when exam slug changes or exams list becomes available
@@ -251,32 +289,53 @@ const Sidebar = ({ isOpen = false, onClose }) => {
 
     // Get exam from context
     const foundExam = getExamBySlug(memoizedExamSlug);
-    
+
     if (foundExam) {
       const examId = foundExam._id;
-      
+
       // Check if this is the same exam we already have selected
       if (selectedExamId === examId) {
-        // Same exam - just update expansion states if data is available
+        // Same exam - check if we need to refresh data
         const examData = getExamData(examId);
-        if (examData && Object.keys(examData).length > 0) {
+
+        // If page was refreshed, force reload data
+        if (
+          hasRefreshedRef.current &&
+          examData &&
+          Object.keys(examData).length > 0
+        ) {
+          // Clear the refresh flag and force reload
+          hasRefreshedRef.current = false;
+          // Force reload by clearing cache and reloading
+          if (!isExamDataLoading(examId)) {
+            // Force reload with forceRefresh flag
+            loadExamData(examId, true);
+          }
+        } else if (examData && Object.keys(examData).length > 0) {
           // Update selectedExam if not set
           if (!selectedExam || selectedExam._id !== examId) {
             setSelectedExam(foundExam);
           }
           updateExpansionStates(examData, subjectKey, unitKey, chapterKey);
         }
-        return; // No need to reload
+        return;
       }
-      
+
       // Different exam or first time - update state
       setSelectedExam(foundExam);
       setSelectedExamId(examId);
-      
+
       // Check if data is already loaded for this exam
       const examData = getExamData(examId);
-      
-      if (examData && Object.keys(examData).length > 0) {
+
+      // If page was refreshed, always reload data even if cached
+      if (hasRefreshedRef.current) {
+        hasRefreshedRef.current = false;
+        // Force reload on page refresh
+        if (!isExamDataLoading(examId)) {
+          loadExamData(examId, true);
+        }
+      } else if (examData && Object.keys(examData).length > 0) {
         // Data already loaded - just update expansion states
         updateExpansionStates(examData, subjectKey, unitKey, chapterKey);
       } else {
@@ -290,7 +349,16 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       setSelectedExamId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memoizedExamSlug, exams.length, loadingExams, getExamBySlug, getExamData, loadExamData, isExamDataLoading, selectedExamId]);
+  }, [
+    memoizedExamSlug,
+    exams.length,
+    loadingExams,
+    getExamBySlug,
+    getExamData,
+    loadExamData,
+    isExamDataLoading,
+    selectedExamId,
+  ]);
 
   // Update expansion states when path changes (navigation within same exam)
   // This should NOT trigger data reloading or loading state, just update UI states
@@ -314,39 +382,62 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       updateExpansionStates(subjectsWithData, subjectKey, unitKey, chapterKey);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subjectKey, unitKey, chapterKey, topicKey, memoizedExamSlug, subjectsWithData, isLoading, loadingExams]);
+  }, [
+    subjectKey,
+    unitKey,
+    chapterKey,
+    topicKey,
+    memoizedExamSlug,
+    subjectsWithData,
+    isLoading,
+    loadingExams,
+  ]);
 
   // Memoize handleExamChange to prevent unnecessary re-renders
-  const handleExamChange = useCallback(async (exam) => {
-    setExamDropdownOpen(false);
-    
-    // Set selected exam and exam ID
-    setSelectedExam(exam);
-    setSelectedExamId(exam._id);
-    
-    // Check if data is already loaded
-    const examData = getExamData(exam._id);
-    if (!examData || Object.keys(examData).length === 0) {
-      // Load exam data via context
-      loadExamData(exam._id);
-    }
-    
-    const examSlug = createSlug(exam.name);
-    goTo(`/${examSlug}`);
-    
-    // Close sidebar on mobile after navigation
-    if (onClose && typeof window !== "undefined" && window.innerWidth < 1024) {
-      onClose();
-    }
-  }, [getExamData, loadExamData, goTo, onClose]);
+  const handleExamChange = useCallback(
+    async (exam) => {
+      setExamDropdownOpen(false);
+
+      // Set selected exam and exam ID
+      setSelectedExam(exam);
+      setSelectedExamId(exam._id);
+
+      // Check if data is already loaded
+      const examData = getExamData(exam._id);
+      if (!examData || Object.keys(examData).length === 0) {
+        // Load exam data via context
+        loadExamData(exam._id);
+      }
+
+      const examSlug = createSlug(exam.name);
+      goTo(`/${examSlug}`);
+
+      // Close sidebar on mobile after navigation
+      if (
+        onClose &&
+        typeof window !== "undefined" &&
+        window.innerWidth < 1024
+      ) {
+        onClose();
+      }
+    },
+    [getExamData, loadExamData, goTo, onClose]
+  );
 
   // Memoize handleNavigation to prevent unnecessary re-renders
-  const handleNavigation = useCallback((path) => {
-    goTo(path);
-    if (onClose && typeof window !== "undefined" && window.innerWidth < 1024) {
-      onClose();
-    }
-  }, [goTo, onClose]);
+  const handleNavigation = useCallback(
+    (path) => {
+      goTo(path);
+      if (
+        onClose &&
+        typeof window !== "undefined" &&
+        window.innerWidth < 1024
+      ) {
+        onClose();
+      }
+    },
+    [goTo, onClose]
+  );
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -371,7 +462,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
 
     const handleTouchMove = (e) => {
       if (!touchStartX || !touchStartY) return;
-      
+
       const touchEndX = e.touches[0].clientX;
       const touchEndY = e.touches[0].clientY;
       const deltaX = touchEndX - touchStartX;
@@ -394,8 +485,12 @@ const Sidebar = ({ isOpen = false, onClose }) => {
 
     const sidebarEl = sidebarRef.current;
     if (sidebarEl) {
-      sidebarEl.addEventListener("touchstart", handleTouchStart, { passive: true });
-      sidebarEl.addEventListener("touchmove", handleTouchMove, { passive: true });
+      sidebarEl.addEventListener("touchstart", handleTouchStart, {
+        passive: true,
+      });
+      sidebarEl.addEventListener("touchmove", handleTouchMove, {
+        passive: true,
+      });
     }
 
     document.addEventListener("keydown", handleEscape);
@@ -413,9 +508,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   // 1. Actually loading exam data AND no data loaded yet
   // 2. OR exams list is loading (first time)
   // But NOT if data is already cached
-  const shouldShowLoading = (isLoading && Object.keys(subjectsWithData).length === 0) || 
-                             (loadingExams && exams.length === 0 && !memoizedExamSlug);
-  
+  const shouldShowLoading =
+    (isLoading && Object.keys(subjectsWithData).length === 0) ||
+    (loadingExams && exams.length === 0 && !memoizedExamSlug);
+
   if (shouldShowLoading) {
     return (
       <aside
@@ -468,7 +564,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
           {/* Mobile Header with Close Button */}
           <div className="flex items-center justify-between mb-4 lg:hidden pb-4 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <FaCalendar className="text-indigo-600 text-lg" aria-hidden="true" />
+              <FaCalendar
+                className="text-indigo-600 text-lg"
+                aria-hidden="true"
+              />
               <h2 className="text-lg font-semibold text-gray-900">
                 Navigation Menu
               </h2>
@@ -504,7 +603,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
               aria-label="Select exam"
             >
               <div className="flex items-center gap-3 truncate">
-                <FaCalendar className="text-blue-600 text-sm" aria-hidden="true" />
+                <FaCalendar
+                  className="text-blue-600 text-sm"
+                  aria-hidden="true"
+                />
                 <span className="text-[15px] font-semibold text-gray-900 truncate">
                   {selectedExam?.name || "Select Exam"}
                 </span>
@@ -551,7 +653,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
           {selectedExam && Object.keys(subjectsWithData).length > 0 && (
             <div className="px-4 pb-3">
               <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" aria-hidden="true" />
+                <FaSearch
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"
+                  aria-hidden="true"
+                />
                 <input
                   type="text"
                   placeholder="Search subjects, units, chapters..."
@@ -600,7 +705,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                         onClick={() => {
                           const examSlug = createSlug(selectedExam.name);
                           handleNavigation(`/${examSlug}/${subKey}`);
-                          setExpandedSubjects((p) => ({ ...p, [subKey]: true }));
+                          setExpandedSubjects((p) => ({
+                            ...p,
+                            [subKey]: true,
+                          }));
                         }}
                         title={sub.name}
                         className={`flex-1 text-left px-4 py-2.5 text-[15px] font-semibold truncate transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
@@ -678,7 +786,9 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                             ? "text-white font-semibold"
                                             : "text-gray-700 hover:text-blue-600"
                                         }`}
-                                        aria-current={isUnitActive ? "page" : undefined}
+                                        aria-current={
+                                          isUnitActive ? "page" : undefined
+                                        }
                                       >
                                         {unit.name}
                                       </button>
@@ -686,7 +796,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                         0 && (
                                         <button
                                           onClick={() =>
-                                            toggle(setExpandedUnits, unitKeyLoop)
+                                            toggle(
+                                              setExpandedUnits,
+                                              unitKeyLoop
+                                            )
                                           }
                                           className={`p-1 rounded transition-colors ${
                                             isUnitActive
@@ -722,7 +835,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                       {isUnitExpanded && (
                                         <motion.div
                                           initial={{ opacity: 0, height: 0 }}
-                                          animate={{ opacity: 1, height: "auto" }}
+                                          animate={{
+                                            opacity: 1,
+                                            height: "auto",
+                                          }}
                                           exit={{ opacity: 0, height: 0 }}
                                           transition={{ duration: 0.2 }}
                                           className="overflow-hidden"
@@ -730,169 +846,183 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                                           <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-3">
                                             {Object.entries(
                                               unit.chapters || {}
-                                            ).map(([chapterKeyLoop, chapter]) => {
-                                              const isChapExpanded =
-                                                expandedChapters[
-                                                  chapterKeyLoop
-                                                ] ?? false;
-                                              const isChapterActive =
-                                                subjectKey === subKey &&
-                                                unitKey === unitKeyLoop &&
-                                                chapterKey === chapterKeyLoop;
-                                              return (
-                                                <div key={chapterKeyLoop}>
-                                                  <div
-                                                    className={`flex items-center justify-between rounded transition-all duration-200 ${
-                                                      isChapterActive
-                                                        ? "bg-blue-600 border-l-2 border-blue-700 shadow-sm"
-                                                        : "hover:bg-gray-50"
-                                                    }`}
-                                                  >
-                                                    <button
-                                                      onClick={() => {
-                                                        const examSlug =
-                                                          createSlug(
-                                                            selectedExam.name
-                                                          );
-                                                        handleNavigation(
-                                                          `/${examSlug}/${subKey}/${unitKeyLoop}/${chapterKeyLoop}`
-                                                        );
-                                                      }}
-                                                      title={chapter.name}
-                                                      className={`flex-1 text-left px-3 py-1.5 text-[13px] rounded transition-colors truncate focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
+                                            ).map(
+                                              ([chapterKeyLoop, chapter]) => {
+                                                const isChapExpanded =
+                                                  expandedChapters[
+                                                    chapterKeyLoop
+                                                  ] ?? false;
+                                                const isChapterActive =
+                                                  subjectKey === subKey &&
+                                                  unitKey === unitKeyLoop &&
+                                                  chapterKey === chapterKeyLoop;
+                                                return (
+                                                  <div key={chapterKeyLoop}>
+                                                    <div
+                                                      className={`flex items-center justify-between rounded transition-all duration-200 ${
                                                         isChapterActive
-                                                          ? "text-white font-semibold"
-                                                          : "text-gray-600 hover:text-blue-600"
+                                                          ? "bg-blue-600 border-l-2 border-blue-700 shadow-sm"
+                                                          : "hover:bg-gray-50"
                                                       }`}
-                                                      aria-current={isChapterActive ? "page" : undefined}
                                                     >
-                                                      {chapter.name}
-                                                    </button>
-                                                    {chapter.topics?.length >
-                                                      0 && (
                                                       <button
-                                                        onClick={() =>
-                                                          toggle(
-                                                            setExpandedChapters,
-                                                            chapterKeyLoop
-                                                          )
-                                                        }
-                                                        className={`p-1 rounded transition-colors ${
+                                                        onClick={() => {
+                                                          const examSlug =
+                                                            createSlug(
+                                                              selectedExam.name
+                                                            );
+                                                          handleNavigation(
+                                                            `/${examSlug}/${subKey}/${unitKeyLoop}/${chapterKeyLoop}`
+                                                          );
+                                                        }}
+                                                        title={chapter.name}
+                                                        className={`flex-1 text-left px-3 py-1.5 text-[13px] rounded transition-colors truncate focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
                                                           isChapterActive
-                                                            ? "hover:bg-blue-700"
-                                                            : "hover:bg-gray-100"
-                                                        } focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                                                        aria-label={`Toggle ${chapter.name}`}
-                                                        aria-expanded={isChapExpanded}
+                                                            ? "text-white font-semibold"
+                                                            : "text-gray-600 hover:text-blue-600"
+                                                        }`}
+                                                        aria-current={
+                                                          isChapterActive
+                                                            ? "page"
+                                                            : undefined
+                                                        }
                                                       >
-                                                        {isChapExpanded ? (
-                                                          <FaChevronUp
-                                                            className={`text-[10px] ${
-                                                              isChapterActive
-                                                                ? "text-white"
-                                                                : "text-gray-400"
-                                                            }`}
-                                                          />
-                                                        ) : (
-                                                          <FaChevronDown
-                                                            className={`text-[10px] ${
-                                                              isChapterActive
-                                                                ? "text-white"
-                                                                : "text-gray-400"
-                                                            }`}
-                                                          />
-                                                        )}
+                                                        {chapter.name}
                                                       </button>
-                                                    )}
-                                                  </div>
-
-                                                  {/* Topics */}
-                                                  <AnimatePresence>
-                                                    {isChapExpanded && (
-                                                      <motion.div
-                                                        initial={{
-                                                          opacity: 0,
-                                                          height: 0,
-                                                        }}
-                                                        animate={{
-                                                          opacity: 1,
-                                                          height: "auto",
-                                                        }}
-                                                        exit={{
-                                                          opacity: 0,
-                                                          height: 0,
-                                                        }}
-                                                        transition={{
-                                                          duration: 0.2,
-                                                        }}
-                                                        className="overflow-hidden"
-                                                      >
-                                                        <div className="ml-4 mt-1 space-y-1">
-                                                          {chapter.topics.map(
-                                                            (topic) => {
-                                                              const decodedTopicSlug =
-                                                                decodeURIComponent(
-                                                                  topic.slug
-                                                                );
-                                                              const topicSlugLower =
-                                                                topic.slug?.toLowerCase();
-                                                              const decodedSlugLower =
-                                                                decodedTopicSlug?.toLowerCase();
-                                                              const topicNameSlug =
-                                                                createSlug(
-                                                                  topic.name
-                                                                ).toLowerCase();
-                                                              const currentTopicKeyLower =
-                                                                topicKey?.toLowerCase();
-
-                                                              const isTopicActive =
-                                                                topicKey &&
-                                                                (currentTopicKeyLower ===
-                                                                  topicSlugLower ||
-                                                                  currentTopicKeyLower ===
-                                                                    decodedSlugLower ||
-                                                                  currentTopicKeyLower ===
-                                                                    topicNameSlug) &&
-                                                                subjectKey ===
-                                                                  subKey &&
-                                                                unitKey ===
-                                                                  unitKeyLoop &&
-                                                                chapterKey ===
-                                                                  chapterKeyLoop;
-                                                              return (
-                                                                <button
-                                                                  key={topic.slug}
-                                                                  onClick={() =>
-                                                                    handleNavigation(
-                                                                      `/${createSlug(
-                                                                        selectedExam.name
-                                                                      )}/${subKey}/${unitKeyLoop}/${chapterKeyLoop}/${encodeURIComponent(
-                                                                        topic.slug
-                                                                      )}`
-                                                                    )
-                                                                  }
-                                                                  title={
-                                                                    topic.name
-                                                                  }
-                                                                  className={`w-full text-left px-3 py-1.5 text-[12px] rounded transition-all duration-200 truncate focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
-                                                                    isTopicActive
-                                                                      ? "bg-blue-600 text-white font-semibold border-l-2 border-blue-700 shadow-sm"
-                                                                      : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
-                                                                  }`}
-                                                                  aria-current={isTopicActive ? "page" : undefined}
-                                                                >
-                                                                  {topic.name}
-                                                                </button>
-                                                              );
-                                                            }
+                                                      {chapter.topics?.length >
+                                                        0 && (
+                                                        <button
+                                                          onClick={() =>
+                                                            toggle(
+                                                              setExpandedChapters,
+                                                              chapterKeyLoop
+                                                            )
+                                                          }
+                                                          className={`p-1 rounded transition-colors ${
+                                                            isChapterActive
+                                                              ? "hover:bg-blue-700"
+                                                              : "hover:bg-gray-100"
+                                                          } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                                                          aria-label={`Toggle ${chapter.name}`}
+                                                          aria-expanded={
+                                                            isChapExpanded
+                                                          }
+                                                        >
+                                                          {isChapExpanded ? (
+                                                            <FaChevronUp
+                                                              className={`text-[10px] ${
+                                                                isChapterActive
+                                                                  ? "text-white"
+                                                                  : "text-gray-400"
+                                                              }`}
+                                                            />
+                                                          ) : (
+                                                            <FaChevronDown
+                                                              className={`text-[10px] ${
+                                                                isChapterActive
+                                                                  ? "text-white"
+                                                                  : "text-gray-400"
+                                                              }`}
+                                                            />
                                                           )}
-                                                        </div>
-                                                      </motion.div>
-                                                    )}
-                                                  </AnimatePresence>
-                                                </div>
-                                              );
-                                            })}
+                                                        </button>
+                                                      )}
+                                                    </div>
+
+                                                    {/* Topics */}
+                                                    <AnimatePresence>
+                                                      {isChapExpanded && (
+                                                        <motion.div
+                                                          initial={{
+                                                            opacity: 0,
+                                                            height: 0,
+                                                          }}
+                                                          animate={{
+                                                            opacity: 1,
+                                                            height: "auto",
+                                                          }}
+                                                          exit={{
+                                                            opacity: 0,
+                                                            height: 0,
+                                                          }}
+                                                          transition={{
+                                                            duration: 0.2,
+                                                          }}
+                                                          className="overflow-hidden"
+                                                        >
+                                                          <div className="ml-4 mt-1 space-y-1">
+                                                            {chapter.topics.map(
+                                                              (topic) => {
+                                                                const decodedTopicSlug =
+                                                                  decodeURIComponent(
+                                                                    topic.slug
+                                                                  );
+                                                                const topicSlugLower =
+                                                                  topic.slug?.toLowerCase();
+                                                                const decodedSlugLower =
+                                                                  decodedTopicSlug?.toLowerCase();
+                                                                const topicNameSlug =
+                                                                  createSlug(
+                                                                    topic.name
+                                                                  ).toLowerCase();
+                                                                const currentTopicKeyLower =
+                                                                  topicKey?.toLowerCase();
+
+                                                                const isTopicActive =
+                                                                  topicKey &&
+                                                                  (currentTopicKeyLower ===
+                                                                    topicSlugLower ||
+                                                                    currentTopicKeyLower ===
+                                                                      decodedSlugLower ||
+                                                                    currentTopicKeyLower ===
+                                                                      topicNameSlug) &&
+                                                                  subjectKey ===
+                                                                    subKey &&
+                                                                  unitKey ===
+                                                                    unitKeyLoop &&
+                                                                  chapterKey ===
+                                                                    chapterKeyLoop;
+                                                                return (
+                                                                  <button
+                                                                    key={
+                                                                      topic.slug
+                                                                    }
+                                                                    onClick={() =>
+                                                                      handleNavigation(
+                                                                        `/${createSlug(
+                                                                          selectedExam.name
+                                                                        )}/${subKey}/${unitKeyLoop}/${chapterKeyLoop}/${encodeURIComponent(
+                                                                          topic.slug
+                                                                        )}`
+                                                                      )
+                                                                    }
+                                                                    title={
+                                                                      topic.name
+                                                                    }
+                                                                    className={`w-full text-left px-3 py-1.5 text-[12px] rounded transition-all duration-200 truncate focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
+                                                                      isTopicActive
+                                                                        ? "bg-blue-600 text-white font-semibold border-l-2 border-blue-700 shadow-sm"
+                                                                        : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+                                                                    }`}
+                                                                    aria-current={
+                                                                      isTopicActive
+                                                                        ? "page"
+                                                                        : undefined
+                                                                    }
+                                                                  >
+                                                                    {topic.name}
+                                                                  </button>
+                                                                );
+                                                              }
+                                                            )}
+                                                          </div>
+                                                        </motion.div>
+                                                      )}
+                                                    </AnimatePresence>
+                                                  </div>
+                                                );
+                                              }
+                                            )}
                                           </div>
                                         </motion.div>
                                       )}

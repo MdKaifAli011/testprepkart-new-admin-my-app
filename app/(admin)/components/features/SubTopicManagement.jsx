@@ -785,20 +785,19 @@ const SubTopicsManagement = () => {
         )}
 
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl shadow-lg border border-gray-200/50 p-4 sm:p-4">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
                 Sub Topics Management
               </h1>
-              <p className="text-gray-600 text-xs">
-                Manage and organize your sub topics, create new sub topics, and
-                track sub topic performance across your educational platform.
+              <p className="text-sm text-gray-600">
+                Manage and organize your sub topics, create new sub topics, and track sub topic performance across your educational platform.
               </p>
             </div>
             <button
               onClick={handleOpenAddForm}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <FaPlus className="w-4 h-4" />
               Add New Sub Topic
@@ -1224,27 +1223,31 @@ const SubTopicsManagement = () => {
         )}
 
         {/* Sub Topics Table */}
-        <div className="bg-white/80 p-4 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900">
-              Sub Topics List
-            </h2>
-            <p className="text-xs text-gray-600 mt-1">
-              Manage your sub topics, view details, and perform actions. You can
-              drag to reorder sub topics.
-            </p>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Sub Topics List
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage your sub topics, view details, and perform actions. You can
+                  drag to reorder sub topics.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Filter Button */}
-          <div className="px-4 py-3 border-b border-gray-200">
+          <div className="px-6 py-3 border-b border-gray-200">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <FaFilter className="w-4 h-4" />
               Filter Sub Topics
               {activeFilterCount > 0 && (
-                <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-medium">
                   {activeFilterCount}
                 </span>
               )}
@@ -1253,7 +1256,7 @@ const SubTopicsManagement = () => {
 
           {/* Filter Section */}
           {showFilters && (
-            <div className="px-4 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 animate-fadeIn">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                 {/* Filter by Exam */}
                 <div className="space-y-2">
@@ -1478,7 +1481,7 @@ const SubTopicsManagement = () => {
             </div>
           )}
 
-          <div className="p-4">
+          <div className="p-6">
             <SubTopicsTable
               subTopics={filteredSubTopics}
               onEdit={handleEditSubTopic}

@@ -171,6 +171,7 @@ const ExamPage = () => {
               <div className="prose prose-sm max-w-none">
                 {exam?.content ? (
                   <div
+                    className="rich-text-content"
                     dangerouslySetInnerHTML={{
                       __html: exam.content,
                     }}

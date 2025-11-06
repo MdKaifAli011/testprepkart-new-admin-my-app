@@ -672,20 +672,20 @@ const TopicManagement = () => {
         )}
 
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl shadow-lg border border-gray-200/50 p-4 sm:p-4">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2">
                 Topic Management
               </h1>
-              <p className="text-gray-600 text-xs">
+              <p className="text-sm text-gray-600">
                 Manage and organize your topics, create new topics, and track
                 topic performance across your educational platform.
               </p>
             </div>
             <button
               onClick={handleOpenAddForm}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <FaPlus className="w-4 h-4" />
               Add New Topic
@@ -695,19 +695,28 @@ const TopicManagement = () => {
 
         {/* Add Topic Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FaPlus className="size-3 text-blue-600" />
-              </div>
-              <h2 className="text-sm font-bold text-gray-900">
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
                 Add New Topic{additionalTopics.length > 1 ? "s" : ""}
               </h2>
+              <button
+                onClick={handleCancelForm}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                disabled={isFormLoading}
+              >
+                <FaTimes className="w-4 h-4" />
+              </button>
             </div>
 
             {formError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                {formError}
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <p className="text-sm font-medium text-red-800">
+                    {formError}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -1069,27 +1078,31 @@ const TopicManagement = () => {
         )}
 
         {/* Topics Table */}
-        <div className="bg-white/80 p-4 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900">
-              Topics List
-            </h2>
-            <p className="text-xs text-gray-600 mt-1">
-              Manage your topics, view details, and perform actions. You can
-              drag to reorder topics.
-            </p>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Topics List
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage your topics, view details, and perform actions. You can
+                  drag to reorder topics.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Filter Button */}
-          <div className="px-4 py-3 border-b border-gray-200">
+          <div className="px-6 py-3 border-b border-gray-200">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <FaFilter className="w-4 h-4" />
               Filter Topics
               {activeFilterCount > 0 && (
-                <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                <span className="bg-white text-blue-600 px-2 py-0.5 rounded-full text-xs font-medium">
                   {activeFilterCount}
                 </span>
               )}
@@ -1098,11 +1111,11 @@ const TopicManagement = () => {
 
           {/* Filter Section */}
           {showFilters && (
-            <div className="px-4 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 animate-fadeIn">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 {/* Filter by Exam */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700">
                     Filter by Exam
                   </label>
                   <select
@@ -1113,7 +1126,7 @@ const TopicManagement = () => {
                       setFilterUnit("");
                       setFilterChapter("");
                     }}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm bg-white"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
                   >
                     <option value="">All Exams</option>
                     {exams.map((exam) => (
@@ -1205,7 +1218,7 @@ const TopicManagement = () => {
                     Active Filters:
                   </span>
                   {filterExam && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Exam:{" "}
                       {exams.find((e) => e._id === filterExam)?.name || "N/A"}
                       <button
@@ -1215,14 +1228,14 @@ const TopicManagement = () => {
                           setFilterUnit("");
                           setFilterChapter("");
                         }}
-                        className="hover:bg-green-200 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                       >
                         <FaTimes className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   {filterSubject && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Subject:{" "}
                       {subjects.find((s) => s._id === filterSubject)?.name ||
                         "N/A"}
@@ -1232,14 +1245,14 @@ const TopicManagement = () => {
                           setFilterUnit("");
                           setFilterChapter("");
                         }}
-                        className="hover:bg-purple-200 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                       >
                         <FaTimes className="w-3 h-3" />
                       </button>
                     </span>
                   )}
                   {filterUnit && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Unit:{" "}
                       {units.find((u) => u._id === filterUnit)?.name || "N/A"}
                       <button
@@ -1254,13 +1267,13 @@ const TopicManagement = () => {
                     </span>
                   )}
                   {filterChapter && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Chapter:{" "}
                       {chapters.find((c) => c._id === filterChapter)?.name ||
                         "N/A"}
                       <button
                         onClick={() => setFilterChapter("")}
-                        className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
+                        className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                       >
                         <FaTimes className="w-3 h-3" />
                       </button>
@@ -1268,7 +1281,7 @@ const TopicManagement = () => {
                   )}
                   <button
                     onClick={clearFilters}
-                    className="ml-auto px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full text-xs font-semibold transition-colors"
+                    className="ml-auto px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full text-xs font-medium transition-colors"
                   >
                     Clear All Filters
                   </button>
@@ -1277,7 +1290,7 @@ const TopicManagement = () => {
             </div>
           )}
 
-          <div className="p-4">
+          <div className="p-6">
             <TopicsTable
               topics={filteredTopics}
               onEdit={handleEditTopic}

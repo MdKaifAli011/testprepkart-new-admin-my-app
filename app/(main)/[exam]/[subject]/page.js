@@ -200,7 +200,7 @@ const SubjectPage = () => {
                     <div className="space-y-4">
                       {subject?.content ? (
                         <div
-                          className="prose prose-sm max-w-none"
+                          className="rich-text-content prose prose-sm max-w-none"
                           dangerouslySetInnerHTML={{
                             __html: subject.content,
                           }}
