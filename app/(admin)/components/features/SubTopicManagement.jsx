@@ -8,10 +8,12 @@ import React, {
 } from "react";
 import SubTopicsTable from "../table/SubTopicsTable";
 import { LoadingWrapper, SkeletonChaptersTable } from "../ui/SkeletonLoader";
-import { FaEdit, FaPlus, FaTimes, FaFilter } from "react-icons/fa";
+import { FaEdit, FaPlus, FaTimes, FaFilter, FaLock } from "react-icons/fa";
 import api from "@/lib/api";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const SubTopicsManagement = () => {
+  const { canCreate, canEdit, canDelete, canReorder, role } = usePermissions();
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingSubTopic, setEditingSubTopic] = useState(null);
@@ -517,6 +519,13 @@ const SubTopicsManagement = () => {
 
   const handleAddSubTopics = async (e) => {
     e.preventDefault();
+
+    // Check permissions
+    if (!canCreate) {
+      setFormError(getPermissionMessage("create", role));
+      return;
+    }
+
     setIsFormLoading(true);
     setFormError(null);
 
@@ -561,6 +570,12 @@ const SubTopicsManagement = () => {
   };
 
   const handleEditSubTopic = (subTopicToEdit) => {
+    // Check permissions
+    if (!canEdit) {
+      setFormError(getPermissionMessage("edit", role));
+      return;
+    }
+
     setEditingSubTopic(subTopicToEdit);
     setEditFormData({
       name: subTopicToEdit.name,
@@ -616,6 +631,12 @@ const SubTopicsManagement = () => {
   };
 
   const handleDeleteSubTopic = async (subTopicToDelete) => {
+    // Check permissions
+    if (!canDelete) {
+      setFormError(getPermissionMessage("delete", role));
+      return;
+    }
+
     if (
       !window.confirm(
         `Are you sure you want to delete "${subTopicToDelete.name}"?`
@@ -697,6 +718,12 @@ const SubTopicsManagement = () => {
   };
 
   const handleDragEnd = async (result) => {
+    // Check permissions
+    if (!canReorder) {
+      setFormError(getPermissionMessage("reorder", role));
+      return;
+    }
+
     if (!result.destination) return;
 
     const sourceIndex = result.source.index;
@@ -795,13 +822,24 @@ const SubTopicsManagement = () => {
                 Manage and organize your sub topics, create new sub topics, and track sub topic performance across your educational platform.
               </p>
             </div>
-            <button
-              onClick={handleOpenAddForm}
-              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <FaPlus className="w-4 h-4" />
-              Add New Sub Topic
-            </button>
+            {canCreate ? (
+              <button
+                onClick={handleOpenAddForm}
+                className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <FaPlus className="w-4 h-4" />
+                Add New Sub Topic
+              </button>
+            ) : (
+              <button
+                disabled
+                title={getPermissionMessage("create", role)}
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-2"
+              >
+                <FaLock className="w-4 h-4" />
+                Add New Sub Topic
+              </button>
+            )}
           </div>
         </div>
 

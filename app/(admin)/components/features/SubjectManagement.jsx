@@ -13,11 +13,14 @@ import {
   FaExclamationTriangle,
   FaClipboardList,
   FaFilter,
+  FaLock,
 } from "react-icons/fa";
 import { ToastContainer, useToast } from "../ui/Toast";
 import api from "@/lib/api";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const SubjectManagement = () => {
+  const { canCreate, canEdit, canDelete, canReorder, role } = usePermissions();
   const [showAddForm, setShowAddForm] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
@@ -115,6 +118,12 @@ const SubjectManagement = () => {
   const handleAddSubject = async (e) => {
     e.preventDefault();
 
+    // Check permissions
+    if (!canCreate) {
+      showError(getPermissionMessage("create", role));
+      return;
+    }
+
     if (!formData.name.trim() || !formData.examId) {
       setFormError("Please fill in all required fields.");
       return;
@@ -155,6 +164,12 @@ const SubjectManagement = () => {
 
   // ✅ Handle Edit Subject
   const handleEditSubject = async (subjectToEdit) => {
+    // Check permissions
+    if (!canEdit) {
+      showError(getPermissionMessage("edit", role));
+      return;
+    }
+
     const newName = prompt("Enter new subject name:", subjectToEdit.name);
     if (newName && newName.trim() !== subjectToEdit.name) {
       try {
@@ -193,6 +208,11 @@ const SubjectManagement = () => {
 
   // ✅ Handle Delete Subject using Axios
   const handleDeleteSubject = async (subjectToDelete) => {
+    // Check permissions
+    if (!canDelete) {
+      showError(getPermissionMessage("delete", role));
+      return;
+    }
     if (
       !window.confirm(
         `Are you sure you want to delete "${subjectToDelete.name}"?`
@@ -284,13 +304,24 @@ const SubjectManagement = () => {
                 Manage and organize your subjects, create new ones, and track performance across your educational platform.
               </p>
             </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <FaPlus className="w-4 h-4" />
-              <span>Add New Subject</span>
-            </button>
+            {canCreate ? (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <FaPlus className="w-4 h-4" />
+                <span>Add New Subject</span>
+              </button>
+            ) : (
+              <button
+                disabled
+                title={getPermissionMessage("create", role)}
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-2"
+              >
+                <FaLock className="w-4 h-4" />
+                <span>Add New Subject</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -512,21 +543,26 @@ const SubjectManagement = () => {
                     : 'You haven\'t created any subjects yet. Click the "Add New Subject" button to get started.'}
                 </p>
                 {activeFilterCount > 0 ? (
-                <button
-                  onClick={clearFilters}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  Clear Filters
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <FaPlus className="w-4 h-4" />
-                  Create Your First Subject
-                </button>
-              )}
+                  <button
+                    onClick={clearFilters}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                ) : canCreate ? (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                  >
+                    <FaPlus className="w-4 h-4" />
+                    Create Your First Subject
+                  </button>
+                ) : (
+                  <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <FaLock className="w-4 h-4" />
+                    <span>{getPermissionMessage("create", role)}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <SubjectTable

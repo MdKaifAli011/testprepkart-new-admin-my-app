@@ -1,14 +1,16 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FaArrowLeft, FaSave, FaEdit } from "react-icons/fa";
+import { FaArrowLeft, FaSave, FaEdit, FaLock } from "react-icons/fa";
 import { ToastContainer, useToast } from "../ui/Toast";
 import { LoadingSpinner } from "../ui/SkeletonLoader";
 import RichTextEditor from "../ui/RichTextEditor";
 import api from "@/lib/api";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const ExamDetailPage = ({ examId }) => {
   const router = useRouter();
+  const { canEdit, role } = usePermissions();
   const { toasts, removeToast, success, error: showError } = useToast();
   const isFetchingRef = useRef(false);
 
@@ -58,6 +60,12 @@ const ExamDetailPage = ({ examId }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSave = async () => {
+    // Check permissions
+    if (!canEdit) {
+      showError(getPermissionMessage("edit", role));
+      return;
+    }
+
     try {
       setIsSaving(true);
       const res = await api.put(`/exam/${examId}`, formData);
@@ -164,25 +172,51 @@ const ExamDetailPage = ({ examId }) => {
               >
                 Cancel
               </button>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 hover:shadow-lg text-white rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 disabled:opacity-50"
-              >
-                {isSaving ? (
-                  <LoadingSpinner size="small" />
-                ) : (
-                  <FaSave className="w-4 h-4" />
-                )}
-                {isSaving ? "Saving..." : "Save Changes"}
-              </button>
+              {canEdit ? (
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 hover:shadow-lg text-white rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <LoadingSpinner size="small" />
+                  ) : (
+                    <FaSave className="w-4 h-4" />
+                  )}
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              ) : (
+                <button
+                  disabled
+                  title={getPermissionMessage("edit", role)}
+                  className="px-2 py-2 bg-gray-300 text-gray-500 rounded-xl font-semibold flex items-center gap-2 cursor-not-allowed transition-all duration-200"
+                >
+                  <FaLock className="w-4 h-4" />
+                  Save Changes
+                </button>
+              )}
             </>
-          ) : (
+          ) : canEdit ? (
             <button
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                if (canEdit) {
+                  setIsEditing(true);
+                } else {
+                  showError(getPermissionMessage("edit", role));
+                }
+              }}
               className="px-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 hover:shadow-lg text-white rounded-xl font-semibold flex items-center gap-2 transition-all duration-200"
             >
               <FaEdit className="w-4 h-4" />
+              Edit Exam
+            </button>
+          ) : (
+            <button
+              disabled
+              title={getPermissionMessage("edit", role)}
+              className="px-2 py-2 bg-gray-300 text-gray-500 rounded-xl font-semibold flex items-center gap-2 cursor-not-allowed transition-all duration-200"
+            >
+              <FaLock className="w-4 h-4" />
               Edit Exam
             </button>
           )}

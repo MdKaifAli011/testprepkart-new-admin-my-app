@@ -7,9 +7,12 @@ import {
   FaEye,
   FaClipboardList,
   FaPowerOff,
+  FaLock,
 } from "react-icons/fa";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const ExamTable = ({ exams, onEdit, onDelete, onView, onToggleStatus }) => {
+  const { canEdit, canDelete, canReorder, role } = usePermissions();
   const router = useRouter();
 
   const handleExamClick = (exam) => {
@@ -97,35 +100,65 @@ const ExamTable = ({ exams, onEdit, onDelete, onView, onToggleStatus }) => {
                       <FaEye className="text-sm" />
                     </button>
                     {onEdit && (
-                      <button
-                        onClick={() => onEdit(exam)}
-                        className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                        title="Edit Exam"
-                      >
-                        <FaEdit className="text-sm" />
-                      </button>
+                      canEdit ? (
+                        <button
+                          onClick={() => onEdit(exam)}
+                          className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                          title="Edit Exam"
+                        >
+                          <FaEdit className="text-sm" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={getPermissionMessage("edit", role)}
+                          className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                        >
+                          <FaLock className="text-sm" />
+                        </button>
+                      )
                     )}
                     {onDelete && (
-                      <button
-                        onClick={() => onDelete(exam)}
-                        className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                        title="Delete Exam"
-                      >
-                        <FaTrash className="text-sm" />
-                      </button>
+                      canDelete ? (
+                        <button
+                          onClick={() => onDelete(exam)}
+                          className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                          title="Delete Exam"
+                        >
+                          <FaTrash className="text-sm" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={getPermissionMessage("delete", role)}
+                          className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                        >
+                          <FaLock className="text-sm" />
+                        </button>
+                      )
                     )}
                     {onToggleStatus && (
-                      <button
-                        onClick={() => onToggleStatus(exam)}
-                        className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                        title={
-                          exam.status === "active"
-                            ? "Deactivate Exam"
-                            : "Activate Exam"
-                        }
-                      >
-                        <FaPowerOff className="text-sm" />
-                      </button>
+                      canReorder ? (
+                        <button
+                          onClick={() => onToggleStatus(exam)}
+                          className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                          title={
+                            exam.status === "active"
+                              ? "Deactivate Exam"
+                              : "Activate Exam"
+                          }
+                        >
+                          <FaPowerOff className="text-sm" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={getPermissionMessage("reorder", role)}
+                          className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                        >
+                          <FaLock className="text-sm" />
+                        </button>
+                      )
                     )}
                   </div>
                 </td>
@@ -182,35 +215,65 @@ const ExamTable = ({ exams, onEdit, onDelete, onView, onToggleStatus }) => {
                   <FaEye className="text-sm" />
                 </button>
                 {onEdit && (
-                  <button
-                    onClick={() => onEdit(exam)}
-                    className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                    title="Edit Exam"
-                  >
-                    <FaEdit className="text-sm" />
-                  </button>
+                  canEdit ? (
+                    <button
+                      onClick={() => onEdit(exam)}
+                      className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                      title="Edit Exam"
+                    >
+                      <FaEdit className="text-sm" />
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      title={getPermissionMessage("edit", role)}
+                      className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                    >
+                      <FaLock className="text-sm" />
+                    </button>
+                  )
                 )}
                 {onDelete && (
-                  <button
-                    onClick={() => onDelete(exam)}
-                    className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                    title="Delete Exam"
-                  >
-                    <FaTrash className="text-sm" />
-                  </button>
+                  canDelete ? (
+                    <button
+                      onClick={() => onDelete(exam)}
+                      className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                      title="Delete Exam"
+                    >
+                      <FaTrash className="text-sm" />
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      title={getPermissionMessage("delete", role)}
+                      className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                    >
+                      <FaLock className="text-sm" />
+                    </button>
+                  )
                 )}
                 {onToggleStatus && (
-                  <button
-                    onClick={() => onToggleStatus(exam)}
-                    className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                    title={
-                      exam.status === "active"
-                        ? "Deactivate Exam"
-                        : "Activate Exam"
-                    }
-                  >
-                    <FaPowerOff className="text-sm" />
-                  </button>
+                  canReorder ? (
+                    <button
+                      onClick={() => onToggleStatus(exam)}
+                      className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                      title={
+                        exam.status === "active"
+                          ? "Deactivate Exam"
+                          : "Activate Exam"
+                      }
+                    >
+                      <FaPowerOff className="text-sm" />
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      title={getPermissionMessage("reorder", role)}
+                      className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                    >
+                      <FaLock className="text-sm" />
+                    </button>
+                  )
                 )}
               </div>
             </div>

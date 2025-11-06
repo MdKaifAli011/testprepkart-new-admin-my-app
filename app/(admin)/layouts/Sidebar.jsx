@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,7 +12,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
-const MENU_ITEMS = [
+const ALL_MENU_ITEMS = [
   { name: "Exam Management", href: "/admin/exam", icon: FaClipboardList },
   { name: "Subject Management", href: "/admin/subject", icon: FaBook },
   { name: "Unit Management", href: "/admin/unit", icon: FaLayerGroup },
@@ -23,11 +23,44 @@ const MENU_ITEMS = [
     href: "/admin/sub-topic",
     icon: FaRegFolderOpen,
   },
-  { name: "User Role Management", href: "/admin/user-role", icon: FaUserTag },
+  {
+    name: "User Role Management",
+    href: "/admin/user-role",
+    icon: FaUserTag,
+    adminOnly: true,
+  },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {
   const pathname = usePathname();
+
+  // Get user role from localStorage
+  const getUserRole = () => {
+    if (typeof window === "undefined") return null;
+    const user = localStorage.getItem("user");
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.role || null;
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        return null;
+      }
+    }
+    return null;
+  };
+
+  // Filter menu items based on user role
+  const userRole = getUserRole();
+  const MENU_ITEMS = ALL_MENU_ITEMS.filter((item) => {
+    // Show admin-only items only if user is admin
+    if (item.adminOnly) {
+      return userRole === "admin";
+    }
+    // Show all other items to all users
+    return true;
+  });
+
   const isActive = (href) =>
     pathname === href || pathname.startsWith(href + "/");
 
@@ -90,10 +123,16 @@ const Sidebar = ({ isOpen, onClose }) => {
                       : {}
                   }
                 >
-                  <Icon className={`text-base flex-shrink-0 ${
-                    active ? "text-white" : "text-gray-500 group-hover:text-gray-700"
-                  }`} />
-                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">{name}</span>
+                  <Icon
+                    className={`text-base flex-shrink-0 ${
+                      active
+                        ? "text-white"
+                        : "text-gray-500 group-hover:text-gray-700"
+                    }`}
+                  />
+                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                    {name}
+                  </span>
                 </Link>
               );
             })}
@@ -111,13 +150,21 @@ const Sidebar = ({ isOpen, onClose }) => {
                 : "text-gray-700 font-normal hover:bg-gray-50 hover:text-gray-900"
             }`}
           >
-            <FaUser className={`text-base flex-shrink-0 ${
-              pathname === "/admin/profile" ? "text-white" : "text-gray-500 group-hover:text-gray-700"
-            }`} />
-            <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">Profile Settings</span>
+            <FaUser
+              className={`text-base flex-shrink-0 ${
+                pathname === "/admin/profile"
+                  ? "text-white"
+                  : "text-gray-500 group-hover:text-gray-700"
+              }`}
+            />
+            <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">
+              Profile Settings
+            </span>
           </Link>
           <div className="px-3 py-2 bg-gray-50 rounded-lg">
-            <div className="text-xs text-center font-medium text-gray-900">Admin Panel</div>
+            <div className="text-xs text-center font-medium text-gray-900">
+              Admin Panel
+            </div>
             <div className="text-xs text-center text-gray-500 mt-0.5">v1.0</div>
           </div>
         </div>

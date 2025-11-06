@@ -21,14 +21,17 @@ import {
   FaExclamationTriangle,
   FaClipboardList,
   FaFilter,
+  FaLock,
 } from "react-icons/fa";
 import { ToastContainer, useToast } from "../ui/Toast";
 import api from "@/lib/api";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 // Lazy load heavy components
 const UnitsTable = lazy(() => import("../table/UnitsTable"));
 
 const UnitsManagement = () => {
+  const { canCreate, canEdit, canDelete, canReorder, role } = usePermissions();
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
@@ -208,6 +211,12 @@ const UnitsManagement = () => {
   const handleAddUnits = async (e) => {
     e.preventDefault();
 
+    // Check permissions
+    if (!canCreate) {
+      showError(getPermissionMessage("create", role));
+      return;
+    }
+
     // Validate that we have at least one unit with a name
     const validUnits = additionalUnits.filter((unit) => unit.name.trim());
 
@@ -327,6 +336,12 @@ const UnitsManagement = () => {
   };
 
   const handleEditUnit = (unitToEdit) => {
+    // Check permissions
+    if (!canEdit) {
+      showError(getPermissionMessage("edit", role));
+      return;
+    }
+
     setEditingUnit(unitToEdit);
     setEditFormData({
       name: unitToEdit.name,
@@ -416,6 +431,12 @@ const UnitsManagement = () => {
   };
 
   const handleDeleteUnit = async (unitToDelete) => {
+    // Check permissions
+    if (!canDelete) {
+      showError(getPermissionMessage("delete", role));
+      return;
+    }
+
     if (
       window.confirm(`Are you sure you want to delete "${unitToDelete.name}"?`)
     ) {
@@ -492,6 +513,12 @@ const UnitsManagement = () => {
   };
 
   const handleDragEnd = async (result) => {
+    // Check permissions
+    if (!canReorder) {
+      showError(getPermissionMessage("reorder", role));
+      return;
+    }
+
     if (!result.destination) return;
 
     const sourceIndex = result.source.index;
@@ -577,13 +604,24 @@ const UnitsManagement = () => {
                 Manage and organize your units, create new units, and track unit performance across your educational platform.
               </p>
             </div>
-            <button
-              onClick={handleOpenAddForm}
-              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <FaPlus className="w-4 h-4" />
-              <span>Add New Units</span>
-            </button>
+            {canCreate ? (
+              <button
+                onClick={handleOpenAddForm}
+                className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <FaPlus className="w-4 h-4" />
+                <span>Add New Units</span>
+              </button>
+            ) : (
+              <button
+                disabled
+                title={getPermissionMessage("create", role)}
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-2"
+              >
+                <FaLock className="w-4 h-4" />
+                <span>Add New Units</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1110,13 +1148,20 @@ const UnitsManagement = () => {
                     Clear Filters
                   </button>
                 ) : (
-                  <button
-                    onClick={handleOpenAddForm}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  >
-                    <FaPlus className="w-4 h-4" />
-                    Create Your First Units
-                  </button>
+                  canCreate ? (
+                    <button
+                      onClick={handleOpenAddForm}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      <FaPlus className="w-4 h-4" />
+                      Create Your First Units
+                    </button>
+                  ) : (
+                    <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium flex items-center gap-2">
+                      <FaLock className="w-4 h-4" />
+                      <span>{getPermissionMessage("create", role)}</span>
+                    </div>
+                  )
                 )}
               </div>
             ) : (

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo } from "react";
 import {
   FaEdit,
@@ -5,8 +6,10 @@ import {
   FaGripVertical,
   FaEye,
   FaPowerOff,
+  FaLock,
 } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const SubTopicsTable = ({
   subTopics,
@@ -15,6 +18,7 @@ const SubTopicsTable = ({
   onDragEnd,
   onToggleStatus,
 }) => {
+  const { canEdit, canDelete, canReorder, role } = usePermissions();
   const [draggedIndex, setDraggedIndex] = useState(null);
   const router = useRouter();
 
@@ -244,42 +248,78 @@ const SubTopicsTable = ({
                               <FaEye className="text-sm" />
                             </button>
                             {/* Edit SubTopic */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit && onEdit(subTopic);
-                              }}
-                              className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                              title="Edit SubTopic"
-                            >
-                              <FaEdit className="text-sm" />
-                            </button>
+                            {onEdit && (
+                              canEdit ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEdit(subTopic);
+                                  }}
+                                  className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                                  title="Edit SubTopic"
+                                >
+                                  <FaEdit className="text-sm" />
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  title={getPermissionMessage("edit", role)}
+                                  className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                                >
+                                  <FaLock className="text-sm" />
+                                </button>
+                              )
+                            )}
                             {/* Delete SubTopic */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete && onDelete(subTopic);
-                              }}
-                              className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                              title="Delete SubTopic"
-                            >
-                              <FaTrash className="text-sm" />
-                            </button>
+                            {onDelete && (
+                              canDelete ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(subTopic);
+                                  }}
+                                  className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                                  title="Delete SubTopic"
+                                >
+                                  <FaTrash className="text-sm" />
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  title={getPermissionMessage("delete", role)}
+                                  className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                                >
+                                  <FaLock className="text-sm" />
+                                </button>
+                              )
+                            )}
                             {/* Toggle Status SubTopic */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleStatus && onToggleStatus(subTopic);
-                              }}
-                              className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                              title={
-                                subTopic.status === "active"
-                                  ? "Deactivate SubTopic"
-                                  : "Activate SubTopic"
-                              }
-                            >
-                              <FaPowerOff className="text-sm" />
-                            </button>
+                            {onToggleStatus && (
+                              canReorder ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleStatus(subTopic);
+                                  }}
+                                  className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                                  title={
+                                    subTopic.status === "active"
+                                      ? "Deactivate SubTopic"
+                                      : "Activate SubTopic"
+                                  }
+                                >
+                                  <FaPowerOff className="text-sm" />
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  title={getPermissionMessage("reorder", role)}
+                                  className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                                >
+                                  <FaLock className="text-sm" />
+                                </button>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -330,40 +370,76 @@ const SubTopicsTable = ({
                         >
                           <FaEye className="text-sm" />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit && onEdit(subTopic);
-                          }}
-                          className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                          title="Edit SubTopic"
-                        >
-                          <FaEdit className="text-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete && onDelete(subTopic);
-                          }}
-                          className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                          title="Delete SubTopic"
-                        >
-                          <FaTrash className="text-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleStatus && onToggleStatus(subTopic);
-                          }}
-                          className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                          title={
-                            subTopic.status === "active"
-                              ? "Deactivate SubTopic"
-                              : "Activate SubTopic"
-                          }
-                        >
-                          <FaPowerOff className="text-sm" />
-                        </button>
+                        {onEdit && (
+                          canEdit ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(subTopic);
+                              }}
+                              className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                              title="Edit SubTopic"
+                            >
+                              <FaEdit className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("edit", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
+                        {onDelete && (
+                          canDelete ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(subTopic);
+                              }}
+                              className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                              title="Delete SubTopic"
+                            >
+                              <FaTrash className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("delete", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
+                        {onToggleStatus && (
+                          canReorder ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus(subTopic);
+                              }}
+                              className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                              title={
+                                subTopic.status === "active"
+                                  ? "Deactivate SubTopic"
+                                  : "Activate SubTopic"
+                              }
+                            >
+                              <FaPowerOff className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("reorder", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>

@@ -1,8 +1,11 @@
+"use client";
 import React, { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { FaEdit, FaTrash, FaEye, FaPowerOff } from "react-icons/fa";
+import { FaEdit, FaTrash, FaEye, FaPowerOff, FaLock } from "react-icons/fa";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
+  const { canEdit, canDelete, canReorder, role } = usePermissions();
   const router = useRouter();
 
   const handleSubjectClick = (subject) => {
@@ -114,40 +117,76 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
                         >
                           <FaEye className="text-sm" />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit && onEdit(subject);
-                          }}
-                          className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                          title="Edit Subject"
-                        >
-                          <FaEdit className="text-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete && onDelete(subject);
-                          }}
-                          className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                          title="Delete Subject"
-                        >
-                          <FaTrash className="text-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleStatus && onToggleStatus(subject);
-                          }}
-                          className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                          title={
-                            subject.status === "active"
-                              ? "Deactivate Subject"
-                              : "Activate Subject"
-                          }
-                        >
-                          <FaPowerOff className="text-sm" />
-                        </button>
+                        {onEdit && (
+                          canEdit ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(subject);
+                              }}
+                              className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                              title="Edit Subject"
+                            >
+                              <FaEdit className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("edit", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
+                        {onDelete && (
+                          canDelete ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(subject);
+                              }}
+                              className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                              title="Delete Subject"
+                            >
+                              <FaTrash className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("delete", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
+                        {onToggleStatus && (
+                          canReorder ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus(subject);
+                              }}
+                              className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                              title={
+                                subject.status === "active"
+                                  ? "Deactivate Subject"
+                                  : "Activate Subject"
+                              }
+                            >
+                              <FaPowerOff className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("reorder", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -203,40 +242,76 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
                     >
                       <FaEye className="text-sm" />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit && onEdit(subject);
-                      }}
-                      className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                      title="Edit Subject"
-                    >
-                      <FaEdit className="text-sm" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete && onDelete(subject);
-                      }}
-                      className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                      title="Delete Subject"
-                    >
-                      <FaTrash className="text-sm" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleStatus && onToggleStatus(subject);
-                      }}
-                      className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                      title={
-                        subject.status === "active"
-                          ? "Deactivate Subject"
-                          : "Activate Subject"
-                      }
-                    >
-                      <FaPowerOff className="text-sm" />
-                    </button>
+                    {onEdit && (
+                      canEdit ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(subject);
+                          }}
+                          className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                          title="Edit Subject"
+                        >
+                          <FaEdit className="text-sm" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={getPermissionMessage("edit", role)}
+                          className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                        >
+                          <FaLock className="text-sm" />
+                        </button>
+                      )
+                    )}
+                    {onDelete && (
+                      canDelete ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(subject);
+                          }}
+                          className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                          title="Delete Subject"
+                        >
+                          <FaTrash className="text-sm" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={getPermissionMessage("delete", role)}
+                          className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                        >
+                          <FaLock className="text-sm" />
+                        </button>
+                      )
+                    )}
+                    {onToggleStatus && (
+                      canReorder ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleStatus(subject);
+                          }}
+                          className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                          title={
+                            subject.status === "active"
+                              ? "Deactivate Subject"
+                              : "Activate Subject"
+                          }
+                        >
+                          <FaPowerOff className="text-sm" />
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={getPermissionMessage("reorder", role)}
+                          className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                        >
+                          <FaLock className="text-sm" />
+                        </button>
+                      )
+                    )}
                   </div>
                 </div>
               </div>

@@ -12,11 +12,14 @@ import {
   FaSave,
   FaExclamationTriangle,
   FaClipboardList,
+  FaLock,
 } from "react-icons/fa";
 import { ToastContainer, useToast } from "../ui/Toast";
 import api from "@/lib/api";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const ExamManagement = () => {
+  const { canCreate, canEdit, canDelete, canReorder, role } = usePermissions();
   const [showAddForm, setShowAddForm] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
   const [isFormLoading, setIsFormLoading] = useState(false);
@@ -64,6 +67,12 @@ const ExamManagement = () => {
 
   const handleAddExam = async (e) => {
     e.preventDefault();
+
+    // Check permissions
+    if (!canCreate) {
+      showError(getPermissionMessage("create", role));
+      return;
+    }
 
     if (!formData.name.trim()) {
       setFormError("Please enter an exam name");
@@ -124,6 +133,11 @@ const ExamManagement = () => {
   };
 
   const handleEditExam = async (exam) => {
+    // Check permissions
+    if (!canEdit) {
+      showError(getPermissionMessage("edit", role));
+      return;
+    }
     const newName = prompt("Enter new exam name:", exam.name);
     if (newName && newName.trim() !== exam.name) {
       try {
@@ -158,6 +172,12 @@ const ExamManagement = () => {
   };
 
   const handleDeleteExam = async (exam) => {
+    // Check permissions
+    if (!canDelete) {
+      showError(getPermissionMessage("delete", role));
+      return;
+    }
+
     if (window.confirm(`Are you sure you want to delete "${exam.name}"?`)) {
       try {
         setIsFormLoading(true);
@@ -242,13 +262,24 @@ const ExamManagement = () => {
                 Manage and organize your exams, create new assessments, and track exam performance across your educational platform.
               </p>
             </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <FaPlus className="w-4 h-4" />
-              <span>Add New Exam</span>
-            </button>
+            {canCreate ? (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <FaPlus className="w-4 h-4" />
+                <span>Add New Exam</span>
+              </button>
+            ) : (
+              <button
+                disabled
+                title={getPermissionMessage("create", role)}
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-2"
+              >
+                <FaLock className="w-4 h-4" />
+                <span>Add New Exam</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -393,13 +424,20 @@ const ExamManagement = () => {
                   You haven&apos;t created any exams yet. Click the &quot;Add
                   New Exam&quot; button to get started.
                 </p>
-                <button
-                  onClick={() => setShowAddForm(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2"
-                >
-                  <FaPlus className="w-4 h-4" />
-                  Create Your First Exam
-                </button>
+                {canCreate ? (
+                  <button
+                    onClick={() => setShowAddForm(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2"
+                  >
+                    <FaPlus className="w-4 h-4" />
+                    Create Your First Exam
+                  </button>
+                ) : (
+                  <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <FaLock className="w-4 h-4" />
+                    <span>{getPermissionMessage("create", role)}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <ExamTable

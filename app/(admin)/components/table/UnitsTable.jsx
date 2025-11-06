@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -6,10 +7,13 @@ import {
   FaGripVertical,
   FaEye,
   FaPowerOff,
+  FaLock,
 } from "react-icons/fa";
 import { FiTrash } from "react-icons/fi";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const UnitsTable = ({ units, onEdit, onDelete, onDragEnd, onToggleStatus }) => {
+  const { canEdit, canDelete, canReorder, role } = usePermissions();
   const [draggedIndex, setDraggedIndex] = useState(null);
   const router = useRouter();
 
@@ -203,40 +207,72 @@ const UnitsTable = ({ units, onEdit, onDelete, onDragEnd, onToggleStatus }) => {
                             >
                               <FaEye className="text-sm" />
                             </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(unit);
-                              }}
-                              className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                              title="Edit Unit"
-                            >
-                              <FaEdit className="text-sm" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(unit);
-                              }}
-                              className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                              title="Delete Unit"
-                            >
-                              <FiTrash className="text-sm" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleStatus && onToggleStatus(unit);
-                              }}
-                              className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                              title={
-                                unit.status === "active"
-                                  ? "Deactivate Unit"
-                                  : "Activate Unit"
-                              }
-                            >
-                              <FaPowerOff className="text-sm" />
-                            </button>
+                            {canEdit ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEdit(unit);
+                                }}
+                                className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                                title="Edit Unit"
+                              >
+                                <FaEdit className="text-sm" />
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                title={getPermissionMessage("edit", role)}
+                                className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                              >
+                                <FaLock className="text-sm" />
+                              </button>
+                            )}
+                            {canDelete ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDelete(unit);
+                                }}
+                                className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                                title="Delete Unit"
+                              >
+                                <FiTrash className="text-sm" />
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                title={getPermissionMessage("delete", role)}
+                                className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                              >
+                                <FaLock className="text-sm" />
+                              </button>
+                            )}
+                            {onToggleStatus && (
+                              canReorder ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggleStatus(unit);
+                                  }}
+                                  className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                                  title={
+                                    unit.status === "active"
+                                      ? "Deactivate Unit"
+                                      : "Activate Unit"
+                                  }
+                                >
+                                  <FaPowerOff className="text-sm" />
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  title={getPermissionMessage("reorder", role)}
+                                  className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                                >
+                                  <FaLock className="text-sm" />
+                                </button>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -287,40 +323,72 @@ const UnitsTable = ({ units, onEdit, onDelete, onDragEnd, onToggleStatus }) => {
                         >
                           <FaEye className="text-sm" />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(unit);
-                          }}
-                          className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
-                          title="Edit Unit"
-                        >
-                          <FaEdit className="text-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(unit);
-                          }}
-                          className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
-                          title="Delete Unit"
-                        >
-                          <FiTrash className="text-sm" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleStatus && onToggleStatus(unit);
-                          }}
-                          className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
-                          title={
-                            unit.status === "active"
-                              ? "Deactivate Unit"
-                              : "Activate Unit"
-                          }
-                        >
-                          <FaPowerOff className="text-sm" />
-                        </button>
+                        {canEdit ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(unit);
+                            }}
+                            className="p-2 bg-blue-50 text-blue-600 rounded-lg transition-colors hover:bg-blue-100"
+                            title="Edit Unit"
+                          >
+                            <FaEdit className="text-sm" />
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            title={getPermissionMessage("edit", role)}
+                            className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                          >
+                            <FaLock className="text-sm" />
+                          </button>
+                        )}
+                        {canDelete ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(unit);
+                            }}
+                            className="p-2 bg-red-50 text-red-600 rounded-lg transition-colors hover:bg-red-100"
+                            title="Delete Unit"
+                          >
+                            <FiTrash className="text-sm" />
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            title={getPermissionMessage("delete", role)}
+                            className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                          >
+                            <FaLock className="text-sm" />
+                          </button>
+                        )}
+                        {onToggleStatus && (
+                          canReorder ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus(unit);
+                              }}
+                              className="p-2 bg-orange-50 text-orange-600 rounded-lg transition-colors hover:bg-orange-100"
+                              title={
+                                unit.status === "active"
+                                  ? "Deactivate Unit"
+                                  : "Activate Unit"
+                              }
+                            >
+                              <FaPowerOff className="text-sm" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title={getPermissionMessage("reorder", role)}
+                              className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
+                            >
+                              <FaLock className="text-sm" />
+                            </button>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>

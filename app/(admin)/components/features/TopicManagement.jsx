@@ -8,10 +8,12 @@ import React, {
 } from "react";
 import TopicsTable from "../table/TopicsTable";
 import { LoadingWrapper, SkeletonChaptersTable } from "../ui/SkeletonLoader";
-import { FaEdit, FaPlus, FaTimes, FaFilter } from "react-icons/fa";
+import { FaEdit, FaPlus, FaTimes, FaFilter, FaLock } from "react-icons/fa";
 import api from "@/lib/api";
+import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
 
 const TopicManagement = () => {
+  const { canCreate, canEdit, canDelete, canReorder, role } = usePermissions();
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingTopic, setEditingTopic] = useState(null);
@@ -418,6 +420,13 @@ const TopicManagement = () => {
 
   const handleAddTopics = async (e) => {
     e.preventDefault();
+
+    // Check permissions
+    if (!canCreate) {
+      setFormError(getPermissionMessage("create", role));
+      return;
+    }
+
     setIsFormLoading(true);
     setFormError(null);
 
@@ -458,6 +467,12 @@ const TopicManagement = () => {
   };
 
   const handleEditTopic = (topicToEdit) => {
+    // Check permissions
+    if (!canEdit) {
+      setFormError(getPermissionMessage("edit", role));
+      return;
+    }
+
     setEditingTopic(topicToEdit);
     setEditFormData({
       name: topicToEdit.name,
@@ -511,6 +526,12 @@ const TopicManagement = () => {
   };
 
   const handleDeleteTopic = async (topicToDelete) => {
+    // Check permissions
+    if (!canDelete) {
+      setFormError(getPermissionMessage("delete", role));
+      return;
+    }
+
     if (
       !window.confirm(
         `Are you sure you want to delete "${topicToDelete.name}"?`
@@ -590,6 +611,12 @@ const TopicManagement = () => {
   };
 
   const handleDragEnd = async (result) => {
+    // Check permissions
+    if (!canReorder) {
+      setFormError(getPermissionMessage("reorder", role));
+      return;
+    }
+
     if (!result.destination) return;
 
     const sourceIndex = result.source.index;
@@ -683,13 +710,24 @@ const TopicManagement = () => {
                 topic performance across your educational platform.
               </p>
             </div>
-            <button
-              onClick={handleOpenAddForm}
-              className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-            >
-              <FaPlus className="w-4 h-4" />
-              Add New Topic
-            </button>
+            {canCreate ? (
+              <button
+                onClick={handleOpenAddForm}
+                className="px-4 py-2 bg-[#0056FF] hover:bg-[#0044CC] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <FaPlus className="w-4 h-4" />
+                Add New Topic
+              </button>
+            ) : (
+              <button
+                disabled
+                title={getPermissionMessage("create", role)}
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed flex items-center gap-2"
+              >
+                <FaLock className="w-4 h-4" />
+                Add New Topic
+              </button>
+            )}
           </div>
         </div>
 

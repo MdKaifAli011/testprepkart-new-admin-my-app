@@ -9,10 +9,17 @@ import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
 import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
 import { ERROR_MESSAGES } from "@/constants";
+import { requireAction, requireAuth } from "@/middleware/authMiddleware";
 
 // ---------- GET SINGLE EXAM ----------
 export async function GET(request, { params }) {
   try {
+    // Check authentication (all authenticated users can view)
+    const authCheck = await requireAuth(request);
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 
@@ -35,6 +42,12 @@ export async function GET(request, { params }) {
 // ---------- UPDATE EXAM ----------
 export async function PUT(request, { params }) {
   try {
+    // Check authentication and permissions
+    const authCheck = await requireAction(request, "PUT");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 403 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();
@@ -94,6 +107,12 @@ export async function PUT(request, { params }) {
 // ---------- PATCH EXAM (Status Update with Cascading) ----------
 export async function PATCH(request, { params }) {
   try {
+    // Check authentication and permissions
+    const authCheck = await requireAction(request, "PATCH");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 403 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();
@@ -212,6 +231,12 @@ export async function PATCH(request, { params }) {
 // ---------- DELETE EXAM ----------
 export async function DELETE(request, { params }) {
   try {
+    // Check authentication and permissions
+    const authCheck = await requireAction(request, "DELETE");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 403 });
+    }
+
     await connectDB();
     const { id } = await params;
 
