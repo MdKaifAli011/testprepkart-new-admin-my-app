@@ -3,7 +3,12 @@ import connectDB from "@/lib/mongodb";
 import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
-import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  notFoundResponse,
+} from "@/utils/apiResponse";
 import { ERROR_MESSAGES } from "@/constants";
 
 export async function GET(request, { params }) {
@@ -42,7 +47,19 @@ export async function PUT(request, { params }) {
       return errorResponse("Invalid topic ID", 400);
     }
 
-    const { name, examId, subjectId, unitId, chapterId, orderNumber, status, content, title, metaDescription, keywords } = body;
+    const {
+      name,
+      examId,
+      subjectId,
+      unitId,
+      chapterId,
+      orderNumber,
+      status,
+      content,
+      title,
+      metaDescription,
+      keywords,
+    } = body;
 
     // Validate required fields
     if (!name || name.trim() === "") {
@@ -61,12 +78,14 @@ export async function PUT(request, { params }) {
     // Prepare update data
     const updateData = {
       name: topicName,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     };
 
+    // Only update fields that are provided
+    if (content !== undefined) updateData.content = content;
+    if (title !== undefined) updateData.title = title;
+    if (metaDescription !== undefined)
+      updateData.metaDescription = metaDescription;
+    if (keywords !== undefined) updateData.keywords = keywords;
     if (examId) updateData.examId = examId;
     if (subjectId) updateData.subjectId = subjectId;
     if (unitId) updateData.unitId = unitId;
@@ -74,10 +93,14 @@ export async function PUT(request, { params }) {
     if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
     if (status) updateData.status = status;
 
-    const updatedTopic = await Topic.findByIdAndUpdate(id, { $set: updateData }, {
-      new: true,
-      runValidators: true,
-    })
+    const updatedTopic = await Topic.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
       .populate("examId", "name status")
       .populate("subjectId", "name")
       .populate("unitId", "name orderNumber")
@@ -113,4 +136,3 @@ export async function DELETE(request, { params }) {
     return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
   }
 }
-

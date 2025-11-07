@@ -42,24 +42,29 @@ const subTopicSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-        // seo title
-        title: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo description
-        metaDescription: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo keywords
-        keywords: {
-          type: String,
-          trim: true,
-          default: "",
-        },
+    // Rich text content
+    content: {
+      type: String,
+      default: "",
+    },
+    // seo title
+    title: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // seo description
+    metaDescription: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // seo keywords
+    keywords: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true }
 );
@@ -73,8 +78,12 @@ subTopicSchema.pre("findOneAndDelete", async function () {
   // No cascading delete needed - SubTopic has no child entities
 });
 
-const SubTopic =
-  mongoose.models.SubTopic || mongoose.model("SubTopic", subTopicSchema);
+// Ensure the latest schema is used during dev hot-reload
+// If a previous version of the model exists (with an outdated schema), delete it first
+if (mongoose.connection?.models?.SubTopic) {
+  delete mongoose.connection.models.SubTopic;
+}
+
+const SubTopic = mongoose.model("SubTopic", subTopicSchema);
 
 export default SubTopic;
-

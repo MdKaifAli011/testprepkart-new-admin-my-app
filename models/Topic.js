@@ -37,24 +37,29 @@ const topicSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-        // seo title
-        title: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo description
-        metaDescription: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo keywords
-        keywords: {
-          type: String,
-          trim: true,
-          default: "",
-        },
+    // Rich text content
+    content: {
+      type: String,
+      default: "",
+    },
+    // seo title
+    title: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // seo description
+    metaDescription: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    // seo keywords
+    keywords: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true }
 );
@@ -85,7 +90,12 @@ topicSchema.pre("findOneAndDelete", async function () {
   }
 });
 
-const Topic = mongoose.models.Topic || mongoose.model("Topic", topicSchema);
+// Ensure the latest schema is used during dev hot-reload
+// If a previous version of the model exists (with an outdated schema), delete it first
+if (mongoose.connection?.models?.Topic) {
+  delete mongoose.connection.models.Topic;
+}
+
+const Topic = mongoose.model("Topic", topicSchema);
 
 export default Topic;
-

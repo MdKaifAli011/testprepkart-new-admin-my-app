@@ -61,12 +61,13 @@ export async function PUT(request, { params }) {
     // Prepare update data
     const updateData = {
       name: subTopicName,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     };
 
+    // Only update fields that are provided
+    if (content !== undefined) updateData.content = content;
+    if (title !== undefined) updateData.title = title;
+    if (metaDescription !== undefined) updateData.metaDescription = metaDescription;
+    if (keywords !== undefined) updateData.keywords = keywords;
     if (examId) updateData.examId = examId;
     if (subjectId) updateData.subjectId = subjectId;
     if (unitId) updateData.unitId = unitId;
