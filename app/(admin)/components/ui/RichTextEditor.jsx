@@ -122,7 +122,11 @@ const RichTextEditor = ({
 
     // If caret is inside an empty text node or inside editor, try to find nearest block ancestor
     let blockElement = nodeToInspect;
-    while (blockElement && blockElement !== editorRef.current && !/^(P|DIV|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH)$/.test(blockElement.tagName)) {
+    while (
+      blockElement &&
+      blockElement !== editorRef.current &&
+      !/^(P|DIV|H[1-6]|BLOCKQUOTE|PRE|LI|TD|TH)$/.test(blockElement.tagName)
+    ) {
       blockElement = blockElement.parentElement;
     }
     if (!blockElement || blockElement === editorRef.current) {
@@ -146,7 +150,9 @@ const RichTextEditor = ({
 
     // alignment detection via computed style of block element
     try {
-      const computedStyle = window.getComputedStyle(blockElement || editorRef.current);
+      const computedStyle = window.getComputedStyle(
+        blockElement || editorRef.current
+      );
       formats.align = computedStyle.textAlign || "left";
     } catch (e) {
       formats.align = null;
@@ -163,11 +169,19 @@ const RichTextEditor = ({
     if (table) formats.table = true;
 
     // image detection: either cursor on an <img> or an ancestor contains an <img>
-    const imgNode = nodeToInspect.nodeType === 1 && nodeToInspect.tagName === "IMG" ? nodeToInspect : closest(nodeToInspect, "img");
+    const imgNode =
+      nodeToInspect.nodeType === 1 && nodeToInspect.tagName === "IMG"
+        ? nodeToInspect
+        : closest(nodeToInspect, "img");
     if (imgNode) formats.image = true;
 
     // button detection: <button> or <a> that looks like a button (common class name patterns)
-    const buttonNode = closest(nodeToInspect, "button") || closest(nodeToInspect, 'a[href].button, a[href][class*="btn"], a[href][class*="button"], a[href][class*="bg-"]');
+    const buttonNode =
+      closest(nodeToInspect, "button") ||
+      closest(
+        nodeToInspect,
+        'a[href].button, a[href][class*="btn"], a[href][class*="button"], a[href][class*="bg-"]'
+      );
     if (buttonNode) formats.button = true;
 
     // link detection
@@ -404,7 +418,9 @@ const RichTextEditor = ({
       // header
       tableHTML += "<thead><tr>";
       for (let j = 0; j < numCols; j++) {
-        tableHTML += `<th class="border border-gray-300 px-4 py-2 bg-gray-100 font-semibold text-left">Header ${j + 1}</th>`;
+        tableHTML += `<th class="border border-gray-300 px-4 py-2 bg-gray-100 font-semibold text-left">Header ${
+          j + 1
+        }</th>`;
       }
       tableHTML += "</tr></thead>";
 
@@ -413,7 +429,9 @@ const RichTextEditor = ({
       for (let i = 0; i < numRows - 1; i++) {
         tableHTML += "<tr>";
         for (let j = 0; j < numCols; j++) {
-          tableHTML += `<td class="border border-gray-300 px-4 py-2">Cell ${i + 1},${j + 1}</td>`;
+          tableHTML += `<td class="border border-gray-300 px-4 py-2">Cell ${
+            i + 1
+          },${j + 1}</td>`;
         }
         tableHTML += "</tr>";
       }
@@ -668,7 +686,9 @@ const RichTextEditor = ({
             type="button"
             onClick={insertImage}
             className={`p-2 rounded-lg transition-colors duration-200 ${
-              activeFormats.image ? "bg-pink-100 text-pink-700" : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
+              activeFormats.image
+                ? "bg-pink-100 text-pink-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
             }`}
             disabled={disabled}
             title="Insert Image"
@@ -680,7 +700,9 @@ const RichTextEditor = ({
             type="button"
             onClick={insertLink}
             className={`p-2 rounded-lg transition-colors duration-200 ${
-              activeFormats.link ? "bg-pink-100 text-pink-700" : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
+              activeFormats.link
+                ? "bg-pink-100 text-pink-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
             }`}
             disabled={disabled}
             title="Insert Link"
@@ -692,7 +714,9 @@ const RichTextEditor = ({
             type="button"
             onClick={insertButton}
             className={`hidden md:flex p-2 rounded-lg transition-colors duration-200 ${
-              activeFormats.button ? "bg-pink-100 text-pink-700" : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
+              activeFormats.button
+                ? "bg-pink-100 text-pink-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
             }`}
             disabled={disabled}
             title="Insert Button"
@@ -704,7 +728,9 @@ const RichTextEditor = ({
             type="button"
             onClick={() => execCommand("formatBlock", "<blockquote>")}
             className={`hidden lg:flex p-2 rounded-lg transition-colors duration-200 ${
-              activeFormats.blockquote ? "bg-yellow-500 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-yellow-50"
+              activeFormats.blockquote
+                ? "bg-yellow-500 text-white"
+                : "text-gray-600 hover:text-gray-900 hover:bg-yellow-50"
             }`}
             disabled={disabled}
             title="Quote"
@@ -716,7 +742,9 @@ const RichTextEditor = ({
             type="button"
             onClick={insertCode}
             className={`p-2 rounded-lg transition-colors duration-200 ${
-              activeFormats.codeblock ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              activeFormats.codeblock
+                ? "bg-gray-700 text-white"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             }`}
             disabled={disabled}
             title="Code Block"
@@ -728,7 +756,9 @@ const RichTextEditor = ({
             type="button"
             onClick={insertTable}
             className={`hidden sm:flex p-2 rounded-lg transition-colors duration-200 ${
-              activeFormats.table ? "bg-pink-100 text-pink-700" : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
+              activeFormats.table
+                ? "bg-pink-100 text-pink-700"
+                : "text-gray-600 hover:text-gray-900 hover:bg-pink-50"
             }`}
             disabled={disabled}
             title="Insert Table"
@@ -771,7 +801,9 @@ const RichTextEditor = ({
         onFocus={handleFocus}
         onBlur={handleBlur}
         className={`rich-text-content min-h-[250px] sm:min-h-[300px] md:min-h-[350px] p-4 sm:p-6 md:p-8 text-sm sm:text-base text-gray-700 focus:outline-none prose prose-sm sm:prose-base md:prose-lg max-w-none transition-all duration-300 ${
-          isFocused ? "ring-2 ring-blue-500 ring-opacity-20 bg-blue-50/30" : "bg-white"
+          isFocused
+            ? "ring-2 ring-blue-500 ring-opacity-20 bg-blue-50/30"
+            : "bg-white"
         } ${disabled ? "bg-gray-50 cursor-not-allowed" : ""}`}
         style={{
           minHeight: "250px",
