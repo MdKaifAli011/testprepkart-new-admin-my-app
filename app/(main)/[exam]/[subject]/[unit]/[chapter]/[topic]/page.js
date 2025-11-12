@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import MainLayout from "../../../../../layout/MainLayout";
 import { useParams, notFound, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -32,6 +32,94 @@ import {
   getNextTopic,
   getPreviousTopic,
 } from "../../../../../lib/hierarchicalNavigation";
+
+const MATHJAX_SCRIPT_SRC = "/vendor/mathjax/MathJax.js?config=TeX-AMS_HTML";
+
+const loadMathJax = () => {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (window.MathJax) return Promise.resolve(window.MathJax);
+
+  if (!loadMathJax.promise) {
+    loadMathJax.promise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(
+        `script[src="${MATHJAX_SCRIPT_SRC}"]`
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(window.MathJax), {
+          once: true,
+        });
+        existingScript.addEventListener("error", reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = MATHJAX_SCRIPT_SRC;
+      script.async = true;
+      script.addEventListener("load", () => resolve(window.MathJax), {
+        once: true,
+      });
+      script.addEventListener("error", reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  return loadMathJax.promise;
+};
+
+const RichContent = ({ html }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!html || typeof window === "undefined") {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadMathJax()
+      .then((MathJax) => {
+        if (!MathJax || !isMounted || !containerRef.current) return;
+
+        try {
+          if (typeof MathJax.typesetClear === "function") {
+            MathJax.typesetClear([containerRef.current]);
+          }
+
+          if (typeof MathJax.texReset === "function") {
+            MathJax.texReset();
+          }
+
+          if (typeof MathJax.typesetPromise === "function") {
+            return MathJax.typesetPromise([containerRef.current]);
+          }
+
+          if (typeof MathJax.typeset === "function") {
+            MathJax.typeset([containerRef.current]);
+          }
+        } catch (error) {
+          console.error("MathJax typeset failed", error);
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to load MathJax", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [html]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="rich-text-content"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+};
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -272,12 +360,7 @@ const TopicPage = () => {
                 Overview: (
                   <div>
                     {topic?.content ? (
-                      <div
-                        className="rich-text-content prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{
-                          __html: topic.content,
-                        }}
-                      />
+                      <RichContent html={topic.content} />
                     ) : (
                       <>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">

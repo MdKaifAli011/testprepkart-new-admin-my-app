@@ -1,10 +1,10 @@
+
 "use client";
 import React, { memo } from "react";
 import Link from "next/link";
 import { FaCheck, FaEye } from "react-icons/fa";
 
 const ListItem = memo(({ item, index, href, color }) => {
-  // Color variants for the vertical bar
   const colorVariants = {
     blue: "bg-blue-500",
     yellow: "bg-yellow-500",
@@ -15,85 +15,92 @@ const ListItem = memo(({ item, index, href, color }) => {
     pink: "bg-pink-500",
   };
 
-  // Get color based on index if color not provided
   const getColor = () => {
     if (color) return colorVariants[color] || colorVariants.blue;
     const colors = ["blue", "blue", "yellow", "green", "black"];
     return colorVariants[colors[index % colors.length]] || colorVariants.blue;
   };
 
-  // Mock data - replace with actual data from API
-  const weightage = item.weightage || "20%";
-  const engagement = item.engagement || "2.2K";
-  const isCompleted = item.isCompleted || false;
-  const progress = item.progress || (isCompleted ? 100 : 0);
+  const weightage = item.weightage ?? "20%";
+  const engagement = item.engagement ?? "2.2K";
+  const isCompleted = Boolean(item.isCompleted);
+  const resolvedProgress =
+    item.progress !== undefined && item.progress !== null
+      ? Number(item.progress)
+      : isCompleted
+      ? 100
+      : 0;
+  const progressValue = Number.isFinite(resolvedProgress)
+    ? resolvedProgress
+    : 0;
+  const progressPercent = Math.min(100, Math.max(0, progressValue));
+  const progressLabel = Math.round(progressPercent);
 
-  const content = (
-    <div className="flex items-center gap-4 w-full">
-      {/* Vertical Colored Bar */}
-      <div className={`w-1 h-16 ${getColor()} rounded-full flex-shrink-0`}></div>
+  const Wrapper = href ? Link : "div";
+  const wrapperProps = href ? { href } : {};
+  const indicatorColor = getColor();
 
-      {/* Left Section - Topic Info */}
-      <div className="flex-1 min-w-0 py-2">
-        <div className="flex items-center gap-3 mb-1">
-          <h3 className="text-base font-bold text-gray-900 truncate">
-            {item.name}
-          </h3>
-        </div>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span>Weightage: {weightage}</span>
-          <div className="flex items-center gap-1">
-            <FaEye className="text-gray-400 text-xs" />
-            <span>{engagement}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Status Column */}
-      <div className="w-32 flex justify-center flex-shrink-0">
-        {isCompleted ? (
-          <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
-            <FaCheck className="text-white text-xs" />
-          </div>
-        ) : (
-          <span className="text-sm text-gray-500">Mark as Done</span>
-        )}
-      </div>
-
-      {/* Progress Column */}
-      <div className="w-32 flex items-center gap-2 flex-shrink-0">
-        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className={`h-full ${
-              progress === 100 ? "bg-green-500" : "bg-gray-400"
-            } transition-all duration-300`}
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-        <span className="text-xs text-gray-600 w-8 text-right">{progress}%</span>
-      </div>
-    </div>
+  const statusMarkup = isCompleted ? (
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-emerald-200 bg-emerald-500 text-white">
+      <FaCheck className="text-xs" />
+    </span>
+  ) : (
+    <span className="text-xs font-medium text-gray-400">Mark as Done</span>
   );
 
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="block bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all p-4"
-      >
-        {content}
-      </Link>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      {content}
-    </div>
+    <Wrapper
+      {...wrapperProps}
+      className="block px-4 py-4 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 sm:px-6"
+    >
+      <div className="flex flex-col gap-4 sm:grid sm:grid-cols-[minmax(0,1fr)_140px_180px] sm:items-center sm:gap-6">
+        <div className="flex items-start gap-3">
+          <span
+            className={`hidden sm:block w-1 self-stretch rounded-full ${indicatorColor}`}
+            aria-hidden="true"
+          />
+          <span
+            className={`block h-0.5 w-12 rounded-full ${indicatorColor} sm:hidden`}
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900 sm:text-base">
+              {item.name}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 sm:text-sm">
+              <span className="font-medium text-emerald-600">
+                Weightage: {weightage}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <FaEye className="text-gray-400" />
+                {engagement}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-start sm:justify-center">
+          {statusMarkup}
+        </div>
+
+        <div className="flex w-full items-center gap-3 sm:w-auto sm:justify-end">
+          <div className="flex-1 h-2 overflow-hidden rounded-full bg-gray-200 sm:w-48">
+            <div
+              className={`h-full ${
+                progressPercent >= 100 ? "bg-emerald-500" : "bg-emerald-400"
+              } transition-all duration-300`}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="min-w-[38px] text-right text-xs font-semibold text-gray-500">
+            {progressLabel}%
+          </span>
+        </div>
+      </div>
+    </Wrapper>
   );
 });
 
 ListItem.displayName = "ListItem";
 
 export default ListItem;
-

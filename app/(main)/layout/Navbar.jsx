@@ -106,6 +106,7 @@ const Navbar = ({ onMenuToggle, isMenuOpen }) => {
           <div className="flex items-center justify-between py-2 sm:py-3">
             {/* Left: Logo */}
             <div className="flex items-center shrink-0">
+              <Link href="/">
               <Image
                 src="/logo.png"
                 alt="TestPrepKart Logo"
@@ -117,6 +118,7 @@ const Navbar = ({ onMenuToggle, isMenuOpen }) => {
                 placeholder="blur"
                 blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PC9zdmc+"
               />
+              </Link>
             </div>
 
             {/* Center: Category Button & Navigation Links */}

@@ -109,28 +109,28 @@ const ExamCard = memo(({ exam }) => {
 
   return (
     <div
-      className={`bg-gradient-to-br ${style.gradient} rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1`}
+      className={`bg-linear-to-br ${style.gradient} rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1`}
     >
       {/* Image Section */}
       <div
-        className={`${style.bgColor} h-48 flex items-center justify-center relative`}
+        className={`${style.bgColor} h-40 sm:h-44 md:h-48 flex items-center justify-center relative`}
       >
         <div className="absolute inset-0 bg-white/20"></div>
         <div className="relative z-10">{getExamIcon(exam.name)}</div>
       </div>
 
       {/* Content Section */}
-      <div className="p-6 bg-white">
-        <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4">
+      <div className="p-5 sm:p-6 bg-white">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
           {exam.name} Exam Preparation
         </h3>
 
         {/* Services List */}
-        <ul className="space-y-2 mb-4">
+        <ul className="space-y-2 sm:space-y-2.5 mb-4">
           {services.map((service, serviceIndex) => (
             <li
               key={serviceIndex}
-              className="flex items-start gap-2 text-sm text-gray-700"
+              className="flex items-start gap-2 text-sm sm:text-sm text-gray-700"
             >
               <FaFlag className="text-purple-600 text-xs mt-1 shrink-0" />
               <span>{service}</span>

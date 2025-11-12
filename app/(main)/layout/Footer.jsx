@@ -43,6 +43,7 @@ const Footer = () => {
           {/* Column 1: Brand and CTA */}
           <div className="space-y-4">
             {/* Logo */}
+            <Link href="/">
             <Image 
               src="/logo.png" 
               alt="TestPrepKart Logo" 
@@ -53,7 +54,7 @@ const Footer = () => {
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PC9zdmc+"
             />
-
+            </Link>
             {/* Description */}
             <p className="text-gray-500 text-sm leading-relaxed">
               Enabling students prepare and crack toughest examinations

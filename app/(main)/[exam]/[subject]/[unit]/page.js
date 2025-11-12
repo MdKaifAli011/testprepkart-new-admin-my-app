@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import MainLayout from "../../../layout/MainLayout";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,6 +30,94 @@ import {
   getNextUnit,
   getPreviousUnit,
 } from "../../../lib/hierarchicalNavigation";
+
+const MATHJAX_SCRIPT_SRC = "/vendor/mathjax/MathJax.js?config=TeX-AMS_HTML";
+
+const loadMathJax = () => {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (window.MathJax) return Promise.resolve(window.MathJax);
+
+  if (!loadMathJax.promise) {
+    loadMathJax.promise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(
+        `script[src="${MATHJAX_SCRIPT_SRC}"]`
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(window.MathJax), {
+          once: true,
+        });
+        existingScript.addEventListener("error", reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = MATHJAX_SCRIPT_SRC;
+      script.async = true;
+      script.addEventListener("load", () => resolve(window.MathJax), {
+        once: true,
+      });
+      script.addEventListener("error", reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  return loadMathJax.promise;
+};
+
+const RichContent = ({ html }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!html || typeof window === "undefined") {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadMathJax()
+      .then((MathJax) => {
+        if (!MathJax || !isMounted || !containerRef.current) return;
+
+        try {
+          if (typeof MathJax.typesetClear === "function") {
+            MathJax.typesetClear([containerRef.current]);
+          }
+
+          if (typeof MathJax.texReset === "function") {
+            MathJax.texReset();
+          }
+
+          if (typeof MathJax.typesetPromise === "function") {
+            return MathJax.typesetPromise([containerRef.current]);
+          }
+
+          if (typeof MathJax.typeset === "function") {
+            MathJax.typeset([containerRef.current]);
+          }
+        } catch (error) {
+          console.error("MathJax typeset failed", error);
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to load MathJax", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [html]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="rich-text-content"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+};
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -75,7 +163,7 @@ const UnitPage = () => {
           setError("Subject not found");
           return;
         }
-        
+
         // Fetch full subject data including content
         const fullSubjectData = await fetchSubjectById(foundSubject._id);
         setSubject(fullSubjectData || foundSubject);
@@ -93,7 +181,7 @@ const UnitPage = () => {
           setError("Unit not found");
           return;
         }
-        
+
         // Fetch full unit data including content
         const fullUnitData = await fetchUnitById(foundUnit._id);
         setUnit(fullUnitData || foundUnit);
@@ -164,7 +252,7 @@ const UnitPage = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <section className="bg-gradient-to-b from-purple-50/40 via-white to-purple-50/30 border border-purple-100 rounded-xl p-5">
+        <section className="bg-linear-to-b from-purple-50/40 via-white to-purple-50/30 border border-purple-100 rounded-xl p-5 sm:p-6 md:p-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
@@ -224,24 +312,17 @@ const UnitPage = () => {
                   Overview: (
                     <div className="space-y-4">
                       {unit?.content ? (
-                        <div
-                          className="rich-text-content prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{
-                            __html: unit.content,
-                          }}
-                        />
-                        
+                        <RichContent html={unit.content} />
                       ) : (
                         <>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">No content available for this unit.</h3>
-                        <p className="text-gray-600 mb-4">
-                          Content can be added from the admin panel.
-                          
-                        </p>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">
+                            No content available for this unit.
+                          </h3>
+                          <p className="text-gray-600 mb-4">
+                            Content can be added from the admin panel.
+                          </p>
                         </>
                       )}
-
-                      
                     </div>
                   ),
                   "Discussion Forum": (
@@ -299,35 +380,50 @@ const UnitPage = () => {
         </section>
 
         {/* Chapters Section */}
-        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <FaBook className="text-xl text-indigo-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              {exam.name} &gt; {subject.name} &gt; {unit.name} Chapters
-            </h2>
-          </div>
+        <section className="bg-transparent">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+              <div className="flex items-start gap-2">
+                <FaBook className="text-lg sm:text-xl text-indigo-600" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                    {exam.name} &gt; {subject.name} &gt; {unit.name} Chapters
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-gray-500">
+                    Review your status and progress for each chapter in this
+                    unit.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 hidden sm:grid sm:grid-cols-[minmax(0,1fr)_140px_180px] gap-6 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <span className="text-left">Chapter</span>
+                <span className="text-center">Status</span>
+                <span className="text-center">Progress</span>
+              </div>
+            </div>
 
-          <div className="space-y-3">
             {chapters.length > 0 ? (
-              chapters.map((chapter, index) => {
-                const chapterSlug = createSlug(chapter.name);
-                return (
-                  <ListItem
-                    key={chapter._id}
-                    item={{
-                      name: chapter.name,
-                      weightage: chapter.weightage || "20%",
-                      engagement: chapter.engagement || "2.2K",
-                      isCompleted: chapter.isCompleted || false,
-                      progress: chapter.progress || 0,
-                    }}
-                    index={index}
-                    href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}/${chapterSlug}`}
-                  />
-                );
-              })
+              <div className="divide-y divide-gray-100">
+                {chapters.map((chapter, index) => {
+                  const chapterSlug = createSlug(chapter.name);
+                  return (
+                    <ListItem
+                      key={chapter._id}
+                      item={{
+                        name: chapter.name,
+                        weightage: chapter.weightage || "20%",
+                        engagement: chapter.engagement || "2.2K",
+                        isCompleted: chapter.isCompleted || false,
+                        progress: chapter.progress || 0,
+                      }}
+                      index={index}
+                      href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}/${chapterSlug}`}
+                    />
+                  );
+                })}
+              </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="px-4 sm:px-6 py-10 text-center text-gray-500">
                 No chapters available for this unit.
               </div>
             )}
@@ -335,7 +431,7 @@ const UnitPage = () => {
         </section>
 
         {/* Navigation */}
-        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <Link
               href={`/${examSlug}/${subjectSlugValue}`}
@@ -375,4 +471,3 @@ const UnitPage = () => {
 };
 
 export default UnitPage;
-

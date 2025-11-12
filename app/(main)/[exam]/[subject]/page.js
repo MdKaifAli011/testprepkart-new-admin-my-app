@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import MainLayout from "../../layout/MainLayout";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -29,13 +29,101 @@ import {
   getPreviousSubject,
 } from "../../lib/hierarchicalNavigation";
 
+const MATHJAX_SCRIPT_SRC = "/vendor/mathjax/MathJax.js?config=TeX-AMS_HTML";
+
+const loadMathJax = () => {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (window.MathJax) return Promise.resolve(window.MathJax);
+
+  if (!loadMathJax.promise) {
+    loadMathJax.promise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(
+        `script[src="${MATHJAX_SCRIPT_SRC}"]`
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(window.MathJax), {
+          once: true,
+        });
+        existingScript.addEventListener("error", reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = MATHJAX_SCRIPT_SRC;
+      script.async = true;
+      script.addEventListener("load", () => resolve(window.MathJax), {
+        once: true,
+      });
+      script.addEventListener("error", reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  return loadMathJax.promise;
+};
+
+const RichContent = ({ html }) => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!html || typeof window === "undefined") {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadMathJax()
+      .then((MathJax) => {
+        if (!MathJax || !isMounted || !containerRef.current) return;
+
+        try {
+          if (typeof MathJax.typesetClear === "function") {
+            MathJax.typesetClear([containerRef.current]);
+          }
+
+          if (typeof MathJax.texReset === "function") {
+            MathJax.texReset();
+          }
+
+          if (typeof MathJax.typesetPromise === "function") {
+            return MathJax.typesetPromise([containerRef.current]);
+          }
+
+          if (typeof MathJax.typeset === "function") {
+            MathJax.typeset([containerRef.current]);
+          }
+        } catch (error) {
+          console.error("MathJax typeset failed", error);
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to load MathJax", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [html]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="rich-text-content"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+};
+
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
 const SubjectPage = () => {
   const { exam: examId, subject: subjectSlug } = useParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(TABS[0]);
-  
+
   // Data states
   const [exam, setExam] = useState(null);
   const [subject, setSubject] = useState(null);
@@ -53,7 +141,7 @@ const SubjectPage = () => {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Fetch exam
         const fetchedExam = await fetchExamById(examId);
         if (!fetchedExam) {
@@ -61,19 +149,19 @@ const SubjectPage = () => {
           return;
         }
         setExam(fetchedExam);
-        
+
         // Fetch subjects for this exam
         const examIdValue = fetchedExam._id || examId;
         const fetchedSubjects = await fetchSubjectsByExam(examIdValue);
         setSubjects(fetchedSubjects);
-        
+
         // Find subject by slug
         const foundSubject = findByIdOrSlug(fetchedSubjects, subjectSlug);
         if (!foundSubject) {
           setError("Subject not found");
           return;
         }
-        
+
         // Fetch full subject data including content
         const fullSubjectData = await fetchSubjectById(foundSubject._id);
         setSubject(fullSubjectData || foundSubject);
@@ -86,7 +174,7 @@ const SubjectPage = () => {
             s.name?.toLowerCase() === subjectSlug.toLowerCase()
         );
         setCurrentSubjectIndex(subjectIndex);
-        
+
         // Fetch units for this subject
         const fetchedUnits = await fetchUnitsBySubject(
           foundSubject._id,
@@ -120,7 +208,7 @@ const SubjectPage = () => {
         setIsLoading(false);
       }
     };
-    
+
     if (examId && subjectSlug) {
       loadData();
     }
@@ -141,26 +229,28 @@ const SubjectPage = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <section className="bg-gradient-to-b from-purple-50/40 via-white to-purple-50/30 border border-purple-100 rounded-xl p-5">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div className="flex-1">
+        <section className="bg-linear-to-b from-purple-50/40 via-white to-purple-50/30 border border-purple-100 rounded-xl p-5 sm:p-6 md:p-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
+            <div className="flex-1 w-full">
               <div className="flex items-center gap-3 mb-2">
                 <FaGraduationCap className="text-2xl text-indigo-600" />
                 <h1 className="text-2xl font-bold text-indigo-900">
                   {subject.name}
                 </h1>
               </div>
-              <p className="text-sm text-gray-600 ml-11">
+              <p className="text-sm text-gray-600 ml-0 md:ml-11">
                 {exam.name} &gt; {subject.name}
               </p>
             </div>
 
             {/* Progress */}
-            <div className="text-right">
-              <p className="text-xs text-gray-500 mb-1">My Preparation</p>
-              <div className="flex items-center gap-3">
+            <div className="w-full md:w-auto text-left md:text-right">
+              <p className="text-xs text-gray-500 mb-2 md:mb-1 uppercase tracking-wide">
+                My Preparation
+              </p>
+              <div className="flex items-center gap-3 md:justify-end">
                 <span className="font-semibold text-gray-700">0%</span>
-                <div className="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="w-full max-w-[160px] h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 transition-all duration-300"
                     style={{ width: "0%" }}
@@ -173,14 +263,14 @@ const SubjectPage = () => {
 
         {/* Tabs */}
         <section className="bg-white rounded-xl shadow-md border border-gray-100">
-          <nav className="flex justify-around border-b border-gray-200 bg-gray-50">
+          <nav className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 md:gap-4 border-b border-gray-200 bg-gray-50 px-3 sm:px-4 overflow-x-auto">
             {TABS.map((tab) => {
               const isActive = activeTab === tab;
               return (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`relative px-5 py-3 text-sm font-medium transition-colors ${
+                  className={`relative px-3 sm:px-5 py-2.5 sm:py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                     isActive
                       ? "text-blue-600 border-b-2 border-blue-600"
                       : "text-gray-500 hover:text-gray-700"
@@ -192,19 +282,14 @@ const SubjectPage = () => {
             })}
           </nav>
 
-          <div className="p-6 md:p-8 min-h-[200px]">
+          <div className="p-5 sm:p-6 md:p-8 min-h-[200px]">
             <div className="text-gray-600 leading-relaxed">
               {
                 {
                   Overview: (
                     <div className="space-y-4">
                       {subject?.content ? (
-                        <div
-                          className="rich-text-content prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{
-                            __html: subject.content,
-                          }}
-                        />
+                        <RichContent html={subject.content} />
                       ) : (
                         <>
                           <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -221,7 +306,7 @@ const SubjectPage = () => {
 
                       {/* Subject Stats */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                        <div className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
                           <FaBook className="text-blue-600 text-2xl mb-2" />
                           <h4 className="font-semibold text-gray-900 mb-1">
                             Units
@@ -230,7 +315,7 @@ const SubjectPage = () => {
                             {units.length} Units
                           </p>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
+                        <div className="bg-linear-to-br from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
                           <FaChartLine className="text-purple-600 text-2xl mb-2" />
                           <h4 className="font-semibold text-gray-900 mb-1">
                             Subject Overview
@@ -239,7 +324,7 @@ const SubjectPage = () => {
                             Explore all units
                           </p>
                         </div>
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
+                        <div className="bg-linear-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
                           <FaTrophy className="text-green-600 text-2xl mb-2" />
                           <h4 className="font-semibold text-gray-900 mb-1">
                             Study Resources
@@ -258,8 +343,8 @@ const SubjectPage = () => {
                       </h3>
                       <p className="text-gray-600 mb-4">
                         Connect with fellow students studying {subject.name} for{" "}
-                        {exam.name}. Ask questions, share knowledge, and get help
-                        from the community.
+                        {exam.name}. Ask questions, share knowledge, and get
+                        help from the community.
                       </p>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <p className="text-sm text-gray-500 italic">
@@ -281,8 +366,8 @@ const SubjectPage = () => {
                       </p>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <p className="text-sm text-gray-500 italic">
-                          Practice tests will be available soon. Start practicing
-                          to excel in your {exam.name} preparation!
+                          Practice tests will be available soon. Start
+                          practicing to excel in your {exam.name} preparation!
                         </p>
                       </div>
                     </div>
@@ -312,35 +397,49 @@ const SubjectPage = () => {
         </section>
 
         {/* Units Section */}
-        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <FaBook className="text-xl text-indigo-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              {exam.name} &gt; {subject.name} Units
-            </h2>
-          </div>
+        <section className="bg-transparent">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+              <div className="flex items-start gap-2">
+                <FaBook className="text-lg sm:text-xl text-indigo-600" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                    {exam.name} &gt; {subject.name} Units
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-gray-500">
+                    Review each unit, its weightage, and completion progress.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 hidden sm:grid sm:grid-cols-[minmax(0,1fr)_140px_180px] gap-6 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <span className="text-left">Unit</span>
+                <span className="text-center">Status</span>
+                <span className="text-center">Progress</span>
+              </div>
+            </div>
 
-          <div className="space-y-3">
             {units.length > 0 ? (
-              units.map((unit, index) => {
-                const unitSlug = createSlug(unit.name);
-                return (
-                  <ListItem
-                    key={unit._id}
-                    item={{
-                      name: unit.name,
-                      weightage: unit.weightage || "20%",
-                      engagement: unit.engagement || "2.2K",
-                      isCompleted: unit.isCompleted || false,
-                      progress: unit.progress || 0,
-                    }}
-                    index={index}
-                    href={`/${examSlug}/${subjectSlugValue}/${unitSlug}`}
-                  />
-                );
-              })
+              <div className="divide-y divide-gray-100">
+                {units.map((unit, index) => {
+                  const unitSlug = createSlug(unit.name);
+                  return (
+                    <ListItem
+                      key={unit._id}
+                      item={{
+                        name: unit.name,
+                        weightage: unit.weightage || "20%",
+                        engagement: unit.engagement || "2.2K",
+                        isCompleted: unit.isCompleted || false,
+                        progress: unit.progress || 0,
+                      }}
+                      index={index}
+                      href={`/${examSlug}/${subjectSlugValue}/${unitSlug}`}
+                    />
+                  );
+                })}
+              </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="px-4 sm:px-6 py-10 text-center text-gray-500">
                 No units available for this subject.
               </div>
             )}
@@ -348,8 +447,8 @@ const SubjectPage = () => {
         </section>
 
         {/* Navigation */}
-        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
+        <section className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
             <Link
               href={`/${examSlug}`}
               className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
@@ -358,7 +457,7 @@ const SubjectPage = () => {
               <span>Back to {exam.name}</span>
             </Link>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               {prevNav && (
                 <Link
                   href={prevNav.url}
