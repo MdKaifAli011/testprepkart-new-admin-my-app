@@ -136,9 +136,12 @@ const PracticeCategoryTable = ({
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm text-gray-600">
-                        {category.subjectId?.name || "N/A"}
-                      </span>
+                    <span
+                              className="px-2 py-1 rounded-md text-xs font-medium text-white"
+                              style={{ backgroundColor: "#3B82F6" }}
+                            >
+                              {category.subjectId?.name}
+                            </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <span className="text-sm text-gray-900">

@@ -163,7 +163,7 @@ const UnitPage = () => {
           setError("Subject not found");
           return;
         }
-
+        
         // Fetch full subject data including content
         const fullSubjectData = await fetchSubjectById(foundSubject._id);
         setSubject(fullSubjectData || foundSubject);
@@ -181,7 +181,7 @@ const UnitPage = () => {
           setError("Unit not found");
           return;
         }
-
+        
         // Fetch full unit data including content
         const fullUnitData = await fetchUnitById(foundUnit._id);
         setUnit(fullUnitData || foundUnit);
@@ -318,9 +318,9 @@ const UnitPage = () => {
                           <h3 className="text-xl font-bold text-gray-900 mb-2">
                             No content available for this unit.
                           </h3>
-                          <p className="text-gray-600 mb-4">
-                            Content can be added from the admin panel.
-                          </p>
+                        <p className="text-gray-600 mb-4">
+                          Content can be added from the admin panel.
+                        </p>
                         </>
                       )}
                     </div>
@@ -387,8 +387,8 @@ const UnitPage = () => {
                 <FaBook className="text-lg sm:text-xl text-indigo-600" />
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    {exam.name} &gt; {subject.name} &gt; {unit.name} Chapters
-                  </h2>
+              {exam.name} &gt; {subject.name} &gt; {unit.name} Chapters
+            </h2>
                   <p className="mt-1 text-xs sm:text-sm text-gray-500">
                     Review your status and progress for each chapter in this
                     unit.
@@ -400,26 +400,26 @@ const UnitPage = () => {
                 <span className="text-center">Status</span>
                 <span className="text-center">Progress</span>
               </div>
-            </div>
+          </div>
 
             {chapters.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {chapters.map((chapter, index) => {
-                  const chapterSlug = createSlug(chapter.name);
-                  return (
-                    <ListItem
-                      key={chapter._id}
-                      item={{
-                        name: chapter.name,
-                        weightage: chapter.weightage || "20%",
-                        engagement: chapter.engagement || "2.2K",
-                        isCompleted: chapter.isCompleted || false,
-                        progress: chapter.progress || 0,
-                      }}
-                      index={index}
-                      href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}/${chapterSlug}`}
-                    />
-                  );
+                const chapterSlug = createSlug(chapter.name);
+                return (
+                  <ListItem
+                    key={chapter._id}
+                    item={{
+                      name: chapter.name,
+                      weightage: chapter.weightage || "20%",
+                      engagement: chapter.engagement || "2.2K",
+                      isCompleted: chapter.isCompleted || false,
+                      progress: chapter.progress || 0,
+                    }}
+                    index={index}
+                    href={`/${examSlug}/${subjectSlugValue}/${unitSlugValue}/${chapterSlug}`}
+                  />
+                );
                 })}
               </div>
             ) : (

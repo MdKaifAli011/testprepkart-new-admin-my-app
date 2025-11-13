@@ -47,6 +47,9 @@ const PracticeSubCategoryTable = ({
                 Paper Name
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Hierarchy Path
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Duration
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -83,6 +86,56 @@ const PracticeSubCategoryTable = ({
                       ? `${subCategory.orderNumber}. `
                       : ""}
                     {subCategory.name}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-center gap-1 flex-wrap">
+                    {/* Show only the last (deepest) assigned level with label */}
+                    {subCategory.subTopicId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Subtopic:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#06B6D4" }}
+                        >
+                          {subCategory.subTopicId.name}
+                        </span>
+                      </span>
+                    ) : subCategory.topicId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Topic:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#F59E0B" }}
+                        >
+                          {subCategory.topicId.name}
+                        </span>
+                      </span>
+                    ) : subCategory.chapterId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Chapter:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#EC4899" }}
+                        >
+                          {subCategory.chapterId.name}
+                        </span>
+                      </span>
+                    ) : subCategory.unitId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Unit:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#8B5CF6" }}
+                        >
+                          {subCategory.unitId.name}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">
+                        Not Assigned
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -217,6 +270,56 @@ const PracticeSubCategoryTable = ({
                     : ""}
                   {subCategory.name}
                 </h3>
+                {/* Hierarchy Path - Show only last assigned level with label */}
+                <div className="mb-2">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {subCategory.subTopicId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Subtopic:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#06B6D4" }}
+                        >
+                          {subCategory.subTopicId.name}
+                        </span>
+                      </span>
+                    ) : subCategory.topicId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Topic:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#F59E0B" }}
+                        >
+                          {subCategory.topicId.name}
+                        </span>
+                      </span>
+                    ) : subCategory.chapterId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Chapter:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#EC4899" }}
+                        >
+                          {subCategory.chapterId.name}
+                        </span>
+                      </span>
+                    ) : subCategory.unitId?.name ? (
+                      <span className="text-xs text-gray-700">
+                        <span className="font-medium">Unit:</span>{" "}
+                        <span
+                          className="px-2 py-0.5 rounded-md text-xs font-medium text-white"
+                          style={{ backgroundColor: "#8B5CF6" }}
+                        >
+                          {subCategory.unitId.name}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">
+                        Not Assigned
+                      </span>
+                    )}
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                   <div>
                     <span className="font-medium">Duration:</span>{" "}
