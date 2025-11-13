@@ -1,0 +1,106 @@
+import mongoose from "mongoose";
+import { STATUS } from "@/constants";
+
+const practiceSubCategorySchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PracticeCategory",
+      required: true,
+    },
+    // Hierarchical references
+    unitId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Unit",
+      default: null,
+    },
+    chapterId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chapter",
+      default: null,
+    },
+    topicId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Topic",
+      default: null,
+    },
+    subTopicId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubTopic",
+      default: null,
+    },
+    // Paper details
+    duration: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    maximumMarks: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    numberOfQuestions: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    negativeMarks: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    status: {
+      type: String,
+      enum: [STATUS.ACTIVE, STATUS.INACTIVE],
+      default: STATUS.ACTIVE,
+    },
+    // Optional: Order number for subcategory within a category
+    orderNumber: {
+      type: Number,
+      min: 1,
+    },
+    // Optional: Description for the subcategory
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+  },
+  { timestamps: true }
+);
+
+// Ensure unique subcategory name per category
+practiceSubCategorySchema.index({ categoryId: 1, name: 1 }, { unique: true });
+
+// Index for better query performance
+practiceSubCategorySchema.index({ categoryId: 1, status: 1 });
+practiceSubCategorySchema.index({ unitId: 1, status: 1 });
+practiceSubCategorySchema.index({ chapterId: 1, status: 1 });
+practiceSubCategorySchema.index({ topicId: 1, status: 1 });
+practiceSubCategorySchema.index({ subTopicId: 1, status: 1 });
+practiceSubCategorySchema.index({ status: 1 });
+practiceSubCategorySchema.index({ createdAt: -1 });
+
+// Ensure unique ordering per category only when orderNumber is set
+practiceSubCategorySchema.index(
+  { categoryId: 1, orderNumber: 1 },
+  { unique: true, partialFilterExpression: { orderNumber: { $exists: true } } }
+);
+
+// Ensure the latest schema is used during dev hot-reload
+if (mongoose.connection?.models?.PracticeSubCategory) {
+  delete mongoose.connection.models.PracticeSubCategory;
+}
+
+const PracticeSubCategory = mongoose.model(
+  "PracticeSubCategory",
+  practiceSubCategorySchema
+);
+
+export default PracticeSubCategory;

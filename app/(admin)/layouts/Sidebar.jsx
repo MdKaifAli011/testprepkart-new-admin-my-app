@@ -23,12 +23,20 @@ const ALL_MENU_ITEMS = [
     href: "/admin/sub-topic",
     icon: FaRegFolderOpen,
   },
+
+  {
+    name: "Practice Test Management",
+    href: "/admin/practice",
+    icon: FaRegFolderOpen,
+    adminOnly: true,
+  },
   {
     name: "User Role Management",
     href: "/admin/user-role",
     icon: FaUserTag,
     adminOnly: true,
   },
+
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {

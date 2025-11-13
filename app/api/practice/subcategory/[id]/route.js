@@ -1,0 +1,359 @@
+import { NextResponse } from "next/server";
+import connectDB from "@/lib/mongodb";
+import PracticeSubCategory from "@/models/PracticeSubCategory";
+import PracticeCategory from "@/models/PracticeCategory";
+import mongoose from "mongoose";
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  notFoundResponse,
+} from "@/utils/apiResponse";
+import { ERROR_MESSAGES, STATUS } from "@/constants";
+
+// ---------- GET SINGLE PRACTICE SUBCATEGORY ----------
+export async function GET(_request, { params }) {
+  try {
+    await connectDB();
+    const { id } = await params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subcategory ID", 400);
+    }
+
+    const subCategory = await PracticeSubCategory.findById(id)
+      .populate("categoryId", "name status examId subjectId")
+      .populate("unitId", "name status")
+      .populate("chapterId", "name status")
+      .populate("topicId", "name status")
+      .populate("subTopicId", "name status")
+      .lean();
+
+    if (!subCategory) {
+      return notFoundResponse("Practice subcategory not found");
+    }
+
+    return successResponse(subCategory);
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.FETCH_FAILED);
+  }
+}
+
+// ---------- UPDATE PRACTICE SUBCATEGORY (FULL) ----------
+export async function PUT(request, { params }) {
+  try {
+    await connectDB();
+    const { id } = await params;
+    const body = await request.json();
+    const {
+      name,
+      categoryId,
+      unitId,
+      chapterId,
+      topicId,
+      subTopicId,
+      duration,
+      maximumMarks,
+      numberOfQuestions,
+      negativeMarks,
+      orderNumber,
+      status,
+      description,
+    } = body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subcategory ID", 400);
+    }
+
+    // Validate required fields
+    if (!name || name.trim() === "") {
+      return errorResponse("SubCategory name is required", 400);
+    }
+
+    // Check if subcategory exists
+    const existingSubCategory = await PracticeSubCategory.findById(id);
+    if (!existingSubCategory) {
+      return notFoundResponse("Practice subcategory not found");
+    }
+
+    // Capitalize first letter of each word in subcategory name
+    const subCategoryName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
+
+    // Check for duplicate name within the same category (excluding current subcategory)
+    const duplicate = await PracticeSubCategory.findOne({
+      name: subCategoryName,
+      categoryId: categoryId || existingSubCategory.categoryId,
+      _id: { $ne: id },
+    });
+    if (duplicate) {
+      return errorResponse(
+        "SubCategory with same name already exists for this category",
+        409
+      );
+    }
+
+    // Validate hierarchical references if provided
+    if (unitId && !mongoose.Types.ObjectId.isValid(unitId)) {
+      return errorResponse("Invalid unitId format", 400);
+    }
+    if (chapterId && !mongoose.Types.ObjectId.isValid(chapterId)) {
+      return errorResponse("Invalid chapterId format", 400);
+    }
+    if (topicId && !mongoose.Types.ObjectId.isValid(topicId)) {
+      return errorResponse("Invalid topicId format", 400);
+    }
+    if (subTopicId && !mongoose.Types.ObjectId.isValid(subTopicId)) {
+      return errorResponse("Invalid subTopicId format", 400);
+    }
+
+    // Validate numeric fields
+    if (maximumMarks !== undefined && (isNaN(maximumMarks) || maximumMarks < 0)) {
+      return errorResponse("Maximum marks must be a non-negative number", 400);
+    }
+    if (
+      numberOfQuestions !== undefined &&
+      (isNaN(numberOfQuestions) || numberOfQuestions < 0)
+    ) {
+      return errorResponse(
+        "Number of questions must be a non-negative number",
+        400
+      );
+    }
+    if (
+      negativeMarks !== undefined &&
+      (isNaN(negativeMarks) || negativeMarks < 0)
+    ) {
+      return errorResponse("Negative marks must be a non-negative number", 400);
+    }
+
+    // Prepare update data
+    const updateData = {
+      name: subCategoryName,
+      description: description || "",
+    };
+
+    if (categoryId) {
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return errorResponse("Invalid categoryId format", 400);
+      }
+      // Check if category exists
+      const categoryExists = await PracticeCategory.findById(categoryId);
+      if (!categoryExists) {
+        return errorResponse("Practice category not found", 404);
+      }
+      updateData.categoryId = categoryId;
+    }
+    if (unitId !== undefined) updateData.unitId = unitId || null;
+    if (chapterId !== undefined) updateData.chapterId = chapterId || null;
+    if (topicId !== undefined) updateData.topicId = topicId || null;
+    if (subTopicId !== undefined) updateData.subTopicId = subTopicId || null;
+    if (duration !== undefined) updateData.duration = duration?.trim() || "";
+    if (maximumMarks !== undefined) updateData.maximumMarks = maximumMarks || 0;
+    if (numberOfQuestions !== undefined)
+      updateData.numberOfQuestions = numberOfQuestions || 0;
+    if (negativeMarks !== undefined)
+      updateData.negativeMarks = negativeMarks || 0;
+    if (orderNumber !== undefined) updateData.orderNumber = orderNumber;
+    if (status) updateData.status = status;
+
+    const updated = await PracticeSubCategory.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
+      .populate("categoryId", "name status examId subjectId")
+      .populate("unitId", "name status")
+      .populate("chapterId", "name status")
+      .populate("topicId", "name status")
+      .populate("subTopicId", "name status")
+      .lean();
+
+    if (!updated) {
+      return notFoundResponse("Practice subcategory not found");
+    }
+
+    // Clear cache
+    const subCategoryRouteModule = await import("../route");
+    if (subCategoryRouteModule?.queryCache) {
+      subCategoryRouteModule.queryCache.clear();
+    }
+
+    return successResponse(
+      updated,
+      "Practice subcategory updated successfully"
+    );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
+  }
+}
+
+// ---------- PATCH PRACTICE SUBCATEGORY (PARTIAL UPDATE) ----------
+export async function PATCH(request, { params }) {
+  try {
+    await connectDB();
+    const { id } = await params;
+    const body = await request.json();
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subcategory ID", 400);
+    }
+
+    const existingSubCategory = await PracticeSubCategory.findById(id);
+    if (!existingSubCategory) {
+      return notFoundResponse("Practice subcategory not found");
+    }
+
+    const updateData = {};
+
+    // Allow partial updates
+    if (body.name !== undefined) {
+      const subCategoryName = body.name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
+      // Check for duplicate name
+      const duplicate = await PracticeSubCategory.findOne({
+        name: subCategoryName,
+        categoryId: body.categoryId || existingSubCategory.categoryId,
+        _id: { $ne: id },
+      });
+      if (duplicate) {
+        return errorResponse(
+          "SubCategory with same name already exists for this category",
+          409
+        );
+      }
+      updateData.name = subCategoryName;
+    }
+    if (body.description !== undefined)
+      updateData.description = body.description;
+    if (body.categoryId !== undefined) {
+      if (!mongoose.Types.ObjectId.isValid(body.categoryId)) {
+        return errorResponse("Invalid categoryId format", 400);
+      }
+      // Check if category exists
+      const categoryExists = await PracticeCategory.findById(body.categoryId);
+      if (!categoryExists) {
+        return errorResponse("Practice category not found", 404);
+      }
+      updateData.categoryId = body.categoryId;
+    }
+    if (body.unitId !== undefined) {
+      if (body.unitId && !mongoose.Types.ObjectId.isValid(body.unitId)) {
+        return errorResponse("Invalid unitId format", 400);
+      }
+      updateData.unitId = body.unitId || null;
+    }
+    if (body.chapterId !== undefined) {
+      if (body.chapterId && !mongoose.Types.ObjectId.isValid(body.chapterId)) {
+        return errorResponse("Invalid chapterId format", 400);
+      }
+      updateData.chapterId = body.chapterId || null;
+    }
+    if (body.topicId !== undefined) {
+      if (body.topicId && !mongoose.Types.ObjectId.isValid(body.topicId)) {
+        return errorResponse("Invalid topicId format", 400);
+      }
+      updateData.topicId = body.topicId || null;
+    }
+    if (body.subTopicId !== undefined) {
+      if (body.subTopicId && !mongoose.Types.ObjectId.isValid(body.subTopicId)) {
+        return errorResponse("Invalid subTopicId format", 400);
+      }
+      updateData.subTopicId = body.subTopicId || null;
+    }
+    if (body.duration !== undefined)
+      updateData.duration = body.duration?.trim() || "";
+    if (body.maximumMarks !== undefined) {
+      if (isNaN(body.maximumMarks) || body.maximumMarks < 0) {
+        return errorResponse("Maximum marks must be a non-negative number", 400);
+      }
+      updateData.maximumMarks = body.maximumMarks || 0;
+    }
+    if (body.numberOfQuestions !== undefined) {
+      if (isNaN(body.numberOfQuestions) || body.numberOfQuestions < 0) {
+        return errorResponse(
+          "Number of questions must be a non-negative number",
+          400
+        );
+      }
+      updateData.numberOfQuestions = body.numberOfQuestions || 0;
+    }
+    if (body.negativeMarks !== undefined) {
+      if (isNaN(body.negativeMarks) || body.negativeMarks < 0) {
+        return errorResponse("Negative marks must be a non-negative number", 400);
+      }
+      updateData.negativeMarks = body.negativeMarks || 0;
+    }
+    if (body.orderNumber !== undefined)
+      updateData.orderNumber = body.orderNumber;
+    if (body.status !== undefined) updateData.status = body.status;
+
+    if (Object.keys(updateData).length === 0) {
+      return errorResponse("No valid update fields provided", 400);
+    }
+
+    const updated = await PracticeSubCategory.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      }
+    )
+      .populate("categoryId", "name status examId subjectId")
+      .populate("unitId", "name status")
+      .populate("chapterId", "name status")
+      .populate("topicId", "name status")
+      .populate("subTopicId", "name status")
+      .lean();
+
+    if (!updated) {
+      return notFoundResponse("Practice subcategory not found");
+    }
+
+    // Clear cache
+    const subCategoryRouteModule = await import("../route");
+    if (subCategoryRouteModule?.queryCache) {
+      subCategoryRouteModule.queryCache.clear();
+    }
+
+    return successResponse(
+      updated,
+      "Practice subcategory updated successfully"
+    );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.UPDATE_FAILED);
+  }
+}
+
+// ---------- DELETE PRACTICE SUBCATEGORY ----------
+export async function DELETE(_request, { params }) {
+  try {
+    await connectDB();
+    const { id } = await params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse("Invalid subcategory ID", 400);
+    }
+
+    const deleted = await PracticeSubCategory.findByIdAndDelete(id);
+    if (!deleted) {
+      return notFoundResponse("Practice subcategory not found");
+    }
+
+    // Clear cache
+    const subCategoryRouteModule = await import("../route");
+    if (subCategoryRouteModule?.queryCache) {
+      subCategoryRouteModule.queryCache.clear();
+    }
+
+    return successResponse(
+      deleted,
+      "Practice subcategory deleted successfully"
+    );
+  } catch (error) {
+    return handleApiError(error, ERROR_MESSAGES.DELETE_FAILED);
+  }
+}
+
