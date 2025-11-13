@@ -667,30 +667,58 @@ const ChaptersManagement = () => {
     if (sourceIndex === destinationIndex) return;
 
     const items = Array.from(chapters);
-    const [reorderedItem] = items.splice(sourceIndex, 1);
-    items.splice(destinationIndex, 0, reorderedItem);
+    const reorderedItem = items[sourceIndex];
+    
+    // Get the unit ID to identify the group
+    const unitId = reorderedItem.unitId?._id || reorderedItem.unitId;
 
-    // Update order numbers based on new position
-    const updatedItems = items.map((item, index) => ({
-      ...item,
+    // Find all chapters in the same group (same unit)
+    const groupChapters = items.filter((chapter) => {
+      const chapterUnitId = chapter.unitId?._id || chapter.unitId;
+      return chapterUnitId === unitId;
+    });
+
+    // Find indices within the group
+    const groupSourceIndex = groupChapters.findIndex(
+      (c) => (c._id || c.id) === (reorderedItem._id || reorderedItem.id)
+    );
+    
+    // Create a reordered group array
+    const reorderedGroup = Array.from(groupChapters);
+    const [movedChapter] = reorderedGroup.splice(groupSourceIndex, 1);
+    
+    // Calculate destination index within the group
+    const groupDestIndex = groupChapters.findIndex((chapter, idx) => {
+      if (idx === groupSourceIndex) return false;
+      const flatIndex = items.findIndex(
+        (c) => (c._id || c.id) === (chapter._id || chapter.id)
+      );
+      return flatIndex >= destinationIndex;
+    });
+    const finalDestIndex = groupDestIndex === -1 ? reorderedGroup.length : groupDestIndex;
+    reorderedGroup.splice(finalDestIndex, 0, movedChapter);
+
+    // Update order numbers only for chapters in this group
+    const updatedGroupChapters = reorderedGroup.map((chapter, index) => ({
+      ...chapter,
       orderNumber: index + 1,
     }));
+
+    // Update the full chapters array, preserving other chapters
+    const updatedItems = items.map((chapter) => {
+      const updatedChapter = updatedGroupChapters.find(
+        (c) => (c._id || c.id) === (chapter._id || chapter.id)
+      );
+      return updatedChapter || chapter;
+    });
 
     // Optimistically update the UI first
     setChapters(updatedItems);
 
     // Update all affected chapters in the database using the reorder endpoint
     try {
-      // Get the unit ID to filter chapters by unit
-      const unitId = reorderedItem.unitId._id || reorderedItem.unitId;
-
-      // Find all chapters that need to be updated (chapters in the same unit)
-      const chaptersToUpdate = updatedItems.filter(
-        (chapter) => (chapter.unitId._id || chapter.unitId) === unitId
-      );
-
       // Prepare chapters data for the reorder endpoint
-      const chaptersData = chaptersToUpdate.map((chapter) => ({
+      const chaptersData = updatedGroupChapters.map((chapter) => ({
         id: chapter._id,
         orderNumber: chapter.orderNumber,
       }));
@@ -702,9 +730,7 @@ const ChaptersManagement = () => {
 
       if (response.data.success) {
         console.log(
-          `✅ Chapter "${reorderedItem.name}" moved to position ${
-            destinationIndex + 1
-          }`
+          `✅ Chapter "${reorderedItem.name}" moved to position ${finalDestIndex + 1}`
         );
       } else {
         throw new Error(response.data.message || "Failed to reorder chapters");

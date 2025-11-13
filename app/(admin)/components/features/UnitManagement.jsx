@@ -528,30 +528,60 @@ const UnitsManagement = () => {
     if (sourceIndex === destinationIndex) return;
 
     const items = Array.from(units);
-    const [reorderedItem] = items.splice(sourceIndex, 1);
-    items.splice(destinationIndex, 0, reorderedItem);
+    const reorderedItem = items[sourceIndex];
+    
+    // Get the subject ID to identify the group
+    const subjectId = reorderedItem.subjectId?._id || reorderedItem.subjectId;
+    const examId = reorderedItem.examId?._id || reorderedItem.examId;
 
-    // Update order numbers based on new position
-    const updatedItems = items.map((item, index) => ({
-      ...item,
+    // Find all units in the same group (same exam and subject)
+    const groupUnits = items.filter((unit) => {
+      const unitSubjectId = unit.subjectId?._id || unit.subjectId;
+      const unitExamId = unit.examId?._id || unit.examId;
+      return unitSubjectId === subjectId && unitExamId === examId;
+    });
+
+    // Find indices within the group
+    const groupSourceIndex = groupUnits.findIndex(
+      (u) => (u._id || u.id) === (reorderedItem._id || reorderedItem.id)
+    );
+    
+    // Create a reordered group array
+    const reorderedGroup = Array.from(groupUnits);
+    const [movedUnit] = reorderedGroup.splice(groupSourceIndex, 1);
+    
+    // Calculate destination index within the group
+    const groupDestIndex = groupUnits.findIndex((unit, idx) => {
+      if (idx === groupSourceIndex) return false;
+      const flatIndex = items.findIndex(
+        (u) => (u._id || u.id) === (unit._id || unit.id)
+      );
+      return flatIndex >= destinationIndex;
+    });
+    const finalDestIndex = groupDestIndex === -1 ? reorderedGroup.length : groupDestIndex;
+    reorderedGroup.splice(finalDestIndex, 0, movedUnit);
+
+    // Update order numbers only for units in this group
+    const updatedGroupUnits = reorderedGroup.map((unit, index) => ({
+      ...unit,
       orderNumber: index + 1,
     }));
+
+    // Update the full units array, preserving other units
+    const updatedItems = items.map((unit) => {
+      const updatedUnit = updatedGroupUnits.find(
+        (u) => (u._id || u.id) === (unit._id || unit.id)
+      );
+      return updatedUnit || unit;
+    });
 
     // Optimistically update the UI first
     setUnits(updatedItems);
 
     // Update all affected units in the database using the reorder endpoint
     try {
-      // Get the subject ID to filter units by subject
-      const subjectId = reorderedItem.subjectId._id || reorderedItem.subjectId;
-
-      // Find all units that need to be updated (units in the same subject)
-      const unitsToUpdate = updatedItems.filter(
-        (unit) => (unit.subjectId._id || unit.subjectId) === subjectId
-      );
-
       // Prepare units data for the reorder endpoint
-      const unitsData = unitsToUpdate.map((unit) => ({
+      const unitsData = updatedGroupUnits.map((unit) => ({
         id: unit._id,
         orderNumber: unit.orderNumber,
       }));
@@ -563,9 +593,7 @@ const UnitsManagement = () => {
 
       if (response.data.success) {
         console.log(
-          `✅ Unit "${reorderedItem.name}" moved to position ${
-            destinationIndex + 1
-          }`
+          `✅ Unit "${reorderedItem.name}" moved to position ${finalDestIndex + 1}`
         );
       } else {
         throw new Error(response.data.message || "Failed to reorder units");

@@ -25,6 +25,40 @@ export async function PATCH(request) {
           { status: 400 }
         );
       }
+      if (!unit.orderNumber || typeof unit.orderNumber !== 'number') {
+        return NextResponse.json(
+          { success: false, message: `Each unit must have a valid orderNumber` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate that all units belong to the same subject and exam
+    const unitDocs = await Unit.find({ _id: { $in: units.map(u => u.id) } })
+      .select('subjectId examId');
+    
+    if (unitDocs.length !== units.length) {
+      return NextResponse.json(
+        { success: false, message: "Some units not found" },
+        { status: 404 }
+      );
+    }
+
+    const firstUnit = unitDocs[0];
+    const firstSubjectId = firstUnit.subjectId?.toString() || firstUnit.subjectId;
+    const firstExamId = firstUnit.examId?.toString() || firstUnit.examId;
+
+    for (let i = 1; i < unitDocs.length; i++) {
+      const unit = unitDocs[i];
+      const subjectId = unit.subjectId?.toString() || unit.subjectId;
+      const examId = unit.examId?.toString() || unit.examId;
+      
+      if (subjectId !== firstSubjectId || examId !== firstExamId) {
+        return NextResponse.json(
+          { success: false, message: "All units must belong to the same subject and exam" },
+          { status: 400 }
+        );
+      }
     }
 
     // Strategy: Use temporary high order numbers to avoid conflicts

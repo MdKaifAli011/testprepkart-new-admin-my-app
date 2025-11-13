@@ -1,15 +1,11 @@
 "use client";
-import React, { useState, useMemo } from "react";
-import {
-  FaEdit,
-  FaTrash,
-  FaGripVertical,
-  FaEye,
-  FaPowerOff,
-  FaLock,
-} from "react-icons/fa";
+import React, { useMemo } from "react";
+import { FaEdit, FaTrash, FaEye, FaPowerOff, FaLock } from "react-icons/fa";
 import { useRouter } from "next/navigation";
-import { usePermissions, getPermissionMessage } from "../../hooks/usePermissions";
+import {
+  usePermissions,
+  getPermissionMessage,
+} from "../../hooks/usePermissions";
 
 const SubTopicsTable = ({
   subTopics,
@@ -19,29 +15,17 @@ const SubTopicsTable = ({
   onToggleStatus,
 }) => {
   const { canEdit, canDelete, canReorder, role } = usePermissions();
-  const [draggedIndex, setDraggedIndex] = useState(null);
   const router = useRouter();
 
   const handleSubTopicClick = (subTopicId) => {
     router.push(`/admin/sub-topic/${subTopicId}`);
   };
 
-  if (!subTopics || subTopics.length === 0) {
-    return (
-      <div className="text-center py-16 bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="text-gray-400 text-6xl mb-4">📑</div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          No Sub Topics Found
-        </h3>
-        <p className="text-sm text-gray-500">
-          Create your first sub topic to get started.
-        </p>
-      </div>
-    );
-  }
-
   // Group subTopics by Exam → Subject → Unit → Chapter → Topic
   const groupedSubTopics = useMemo(() => {
+    if (!subTopics || subTopics.length === 0) {
+      return [];
+    }
     const groups = {};
     subTopics.forEach((subTopic) => {
       const examId = subTopic.examId?._id || subTopic.examId || "unassigned";
@@ -94,42 +78,19 @@ const SubTopicsTable = ({
     });
   }, [subTopics]);
 
-  const handleDragStart = (e, groupIndex, subTopicIndex) => {
-    setDraggedIndex(`${groupIndex}-${subTopicIndex}`);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e) => e.preventDefault();
-
-  const handleDrop = (e, groupIndex, subTopicIndex) => {
-    e.preventDefault();
-    const currentKey = `${groupIndex}-${subTopicIndex}`;
-    if (!draggedIndex || draggedIndex === currentKey) return;
-
-    const [sourceGroup, sourceIndex] = draggedIndex.split("-").map(Number);
-    if (sourceGroup === groupIndex) {
-      // Only allow drag within same group
-      // Calculate new index in flat subTopics array
-      let flatSourceIndex = 0;
-      for (let i = 0; i < sourceGroup; i++) {
-        flatSourceIndex += groupedSubTopics[i].subTopics.length;
-      }
-      flatSourceIndex += sourceIndex;
-
-      let flatDestIndex = 0;
-      for (let i = 0; i < groupIndex; i++) {
-        flatDestIndex += groupedSubTopics[i].subTopics.length;
-      }
-      flatDestIndex += subTopicIndex;
-
-      onDragEnd &&
-        onDragEnd({
-          source: { index: flatSourceIndex },
-          destination: { index: flatDestIndex },
-        });
-    }
-    setDraggedIndex(null);
-  };
+  if (!subTopics || subTopics.length === 0) {
+    return (
+      <div className="text-center py-16 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="text-gray-400 text-6xl mb-4">📑</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          No Sub Topics Found
+        </h3>
+        <p className="text-sm text-gray-500">
+          Create your first sub topic to get started.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -150,27 +111,45 @@ const SubTopicsTable = ({
             {/* Breadcrumb Header */}
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
               <div className="flex items-center gap-2.5 flex-wrap text-sm font-medium text-white">
-                <span className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#10B981' }}>
+                <span
+                  className="px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#10B981" }}
+                >
                   {group.examName}
                 </span>
                 <span className="text-gray-400">›</span>
-                <span className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#9333EA' }}>
+                <span
+                  className="px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#9333EA" }}
+                >
                   {group.subjectName}
                 </span>
                 <span className="text-gray-400">›</span>
-                <span className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#0056FF' }}>
+                <span
+                  className="px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#0056FF" }}
+                >
                   {group.unitName}
                 </span>
                 <span className="text-gray-400">›</span>
-                <span className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#7C3AED' }}>
+                <span
+                  className="px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#7C3AED" }}
+                >
                   {group.chapterName}
                 </span>
                 <span className="text-gray-400">›</span>
-                <span className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#6366F1' }}>
+                <span
+                  className="px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#6366F1" }}
+                >
                   {group.topicName}
                 </span>
                 <span className="text-gray-400">›</span>
-                <span className="px-2.5 py-1 rounded-full" style={{ backgroundColor: '#374151' }}>
+                <span
+                  className="px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: "#374151" }}
+                >
                   {sortedSubTopics.length}{" "}
                   {sortedSubTopics.length === 1 ? "SubTopic" : "SubTopics"}
                 </span>
@@ -182,36 +161,26 @@ const SubTopicsTable = ({
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 w-10"></th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SubTopic Name</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Order
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      SubTopic Name
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {sortedSubTopics.map((subTopic, subTopicIndex) => {
-                    const dragKey = `${groupIndex}-${subTopicIndex}`;
                     return (
                       <tr
                         key={subTopic._id || subTopicIndex}
-                        draggable
-                        onDragStart={(e) =>
-                          handleDragStart(e, groupIndex, subTopicIndex)
-                        }
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, groupIndex, subTopicIndex)}
-                        onDragEnd={() => setDraggedIndex(null)}
-                        className={`hover:bg-gray-50 transition-colors cursor-move ${
-                          draggedIndex === dragKey ? "opacity-50 bg-gray-100" : ""
-                        } ${
-                          subTopic.status === "inactive"
-                            ? "opacity-60"
-                            : ""
+                        className={`hover:bg-gray-50 transition-colors ${
+                          subTopic.status === "inactive" ? "opacity-60" : ""
                         }`}
                       >
-                        <td className="px-6 py-4 text-gray-400">
-                          <FaGripVertical className="cursor-grab hover:text-gray-600 transition-colors" />
-                        </td>
                         {/* Order Number */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-700 font-medium text-sm">
@@ -248,8 +217,8 @@ const SubTopicsTable = ({
                               <FaEye className="text-sm" />
                             </button>
                             {/* Edit SubTopic */}
-                            {onEdit && (
-                              canEdit ? (
+                            {onEdit &&
+                              (canEdit ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -268,11 +237,10 @@ const SubTopicsTable = ({
                                 >
                                   <FaLock className="text-sm" />
                                 </button>
-                              )
-                            )}
+                              ))}
                             {/* Delete SubTopic */}
-                            {onDelete && (
-                              canDelete ? (
+                            {onDelete &&
+                              (canDelete ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -291,11 +259,10 @@ const SubTopicsTable = ({
                                 >
                                   <FaLock className="text-sm" />
                                 </button>
-                              )
-                            )}
+                              ))}
                             {/* Toggle Status SubTopic */}
-                            {onToggleStatus && (
-                              canReorder ? (
+                            {onToggleStatus &&
+                              (canReorder ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -318,8 +285,7 @@ const SubTopicsTable = ({
                                 >
                                   <FaLock className="text-sm" />
                                 </button>
-                              )
-                            )}
+                              ))}
                           </div>
                         </td>
                       </tr>
@@ -337,9 +303,7 @@ const SubTopicsTable = ({
                   <div
                     key={subTopic._id || subTopicIndex}
                     className={`p-4 hover:bg-gray-50 transition-colors ${
-                      subTopic.status === "inactive"
-                        ? "opacity-60"
-                        : ""
+                      subTopic.status === "inactive" ? "opacity-60" : ""
                     }`}
                   >
                     <div className="flex justify-between items-start gap-3">
@@ -370,8 +334,8 @@ const SubTopicsTable = ({
                         >
                           <FaEye className="text-sm" />
                         </button>
-                        {onEdit && (
-                          canEdit ? (
+                        {onEdit &&
+                          (canEdit ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -390,10 +354,9 @@ const SubTopicsTable = ({
                             >
                               <FaLock className="text-sm" />
                             </button>
-                          )
-                        )}
-                        {onDelete && (
-                          canDelete ? (
+                          ))}
+                        {onDelete &&
+                          (canDelete ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -412,10 +375,9 @@ const SubTopicsTable = ({
                             >
                               <FaLock className="text-sm" />
                             </button>
-                          )
-                        )}
-                        {onToggleStatus && (
-                          canReorder ? (
+                          ))}
+                        {onToggleStatus &&
+                          (canReorder ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -438,8 +400,7 @@ const SubTopicsTable = ({
                             >
                               <FaLock className="text-sm" />
                             </button>
-                          )
-                        )}
+                          ))}
                       </div>
                     </div>
                   </div>
@@ -454,4 +415,3 @@ const SubTopicsTable = ({
 };
 
 export default SubTopicsTable;
-

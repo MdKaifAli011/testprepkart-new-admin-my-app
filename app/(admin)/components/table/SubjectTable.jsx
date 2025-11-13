@@ -12,22 +12,11 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
     router.push(`/admin/subject/${subject._id}`);
   };
 
-  if (!subjects || subjects.length === 0) {
-    return (
-      <div className="text-center py-16 bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="text-gray-400 text-6xl mb-4">📘</div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          No Subjects Found
-        </h3>
-        <p className="text-sm text-gray-500">
-          Add your first subject to get started.
-        </p>
-      </div>
-    );
-  }
-
   // Group subjects by Exam
   const groupedSubjects = useMemo(() => {
+    if (!subjects || subjects.length === 0) {
+      return [];
+    }
     const groups = {};
     subjects.forEach((subject) => {
       const examId = subject.examId?._id || subject.examId || "unassigned";
@@ -47,6 +36,20 @@ const SubjectTable = ({ subjects, onEdit, onDelete, onToggleStatus }) => {
       a.examName.localeCompare(b.examName)
     );
   }, [subjects]);
+
+  if (!subjects || subjects.length === 0) {
+    return (
+      <div className="text-center py-16 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="text-gray-400 text-6xl mb-4">📘</div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          No Subjects Found
+        </h3>
+        <p className="text-sm text-gray-500">
+          Add your first subject to get started.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

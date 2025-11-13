@@ -624,31 +624,68 @@ const TopicManagement = () => {
 
     if (sourceIndex === destinationIndex) return;
 
-    const reorderedItem = topics[sourceIndex];
+    const items = Array.from(topics);
+    const reorderedItem = items[sourceIndex];
+    
+    // Get the chapter ID to identify the group
+    const chapterId = reorderedItem.chapterId?._id || reorderedItem.chapterId;
 
-    // Optimistic UI update
-    const newTopics = Array.from(topics);
-    const [removed] = newTopics.splice(sourceIndex, 1);
-    newTopics.splice(destinationIndex, 0, removed);
+    // Find all topics in the same group (same chapter)
+    const groupTopics = items.filter((topic) => {
+      const topicChapterId = topic.chapterId?._id || topic.chapterId;
+      return topicChapterId === chapterId;
+    });
 
-    // Update order numbers
-    const updatedTopics = newTopics.map((topic, index) => ({
-      id: topic._id,
+    // Find indices within the group
+    const groupSourceIndex = groupTopics.findIndex(
+      (t) => (t._id || t.id) === (reorderedItem._id || reorderedItem.id)
+    );
+    
+    // Create a reordered group array
+    const reorderedGroup = Array.from(groupTopics);
+    const [movedTopic] = reorderedGroup.splice(groupSourceIndex, 1);
+    
+    // Calculate destination index within the group
+    const groupDestIndex = groupTopics.findIndex((topic, idx) => {
+      if (idx === groupSourceIndex) return false;
+      const flatIndex = items.findIndex(
+        (t) => (t._id || t.id) === (topic._id || topic.id)
+      );
+      return flatIndex >= destinationIndex;
+    });
+    const finalDestIndex = groupDestIndex === -1 ? reorderedGroup.length : groupDestIndex;
+    reorderedGroup.splice(finalDestIndex, 0, movedTopic);
+
+    // Update order numbers only for topics in this group
+    const updatedGroupTopics = reorderedGroup.map((topic, index) => ({
+      ...topic,
       orderNumber: index + 1,
     }));
 
-    setTopics(newTopics);
+    // Update the full topics array, preserving other topics
+    const updatedItems = items.map((topic) => {
+      const updatedTopic = updatedGroupTopics.find(
+        (t) => (t._id || t.id) === (topic._id || topic.id)
+      );
+      return updatedTopic || topic;
+    });
+
+    setTopics(updatedItems);
 
     try {
+      // Prepare topics data for the reorder endpoint
+      const topicsData = updatedGroupTopics.map((topic) => ({
+        id: topic._id,
+        orderNumber: topic.orderNumber,
+      }));
+
       const response = await api.patch("/topic/reorder", {
-        topics: updatedTopics,
+        topics: topicsData,
       });
 
       if (response.data.success) {
         console.log(
-          `✅ Topic "${reorderedItem.name}" moved to position ${
-            destinationIndex + 1
-          }`
+          `✅ Topic "${reorderedItem.name}" moved to position ${finalDestIndex + 1}`
         );
       } else {
         throw new Error(

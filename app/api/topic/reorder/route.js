@@ -22,6 +22,48 @@ async function handleReorder(request) {
       );
     }
 
+    // Validate each topic object
+    for (const topic of topics) {
+      if (!topic.id || !topic.orderNumber) {
+        return NextResponse.json(
+          { success: false, message: "Each topic must have id and orderNumber" },
+          { status: 400 }
+        );
+      }
+      if (typeof topic.orderNumber !== 'number') {
+        return NextResponse.json(
+          { success: false, message: "orderNumber must be a number" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate that all topics belong to the same chapter
+    const topicDocs = await Topic.find({ _id: { $in: topics.map(t => t.id) } })
+      .select('chapterId');
+    
+    if (topicDocs.length !== topics.length) {
+      return NextResponse.json(
+        { success: false, message: "Some topics not found" },
+        { status: 404 }
+      );
+    }
+
+    const firstTopic = topicDocs[0];
+    const firstChapterId = firstTopic.chapterId?.toString() || firstTopic.chapterId;
+
+    for (let i = 1; i < topicDocs.length; i++) {
+      const topic = topicDocs[i];
+      const chapterId = topic.chapterId?.toString() || topic.chapterId;
+      
+      if (chapterId !== firstChapterId) {
+        return NextResponse.json(
+          { success: false, message: "All topics must belong to the same chapter" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Two-step update to prevent duplicate key errors
     // Step 1: Set all topics to temporary high order numbers
     const tempUpdates = topics.map((topic, index) => ({

@@ -731,37 +731,68 @@ const SubTopicsManagement = () => {
 
     if (sourceIndex === destinationIndex) return;
 
-    const reorderedItem = filteredSubTopics[sourceIndex];
+    const items = Array.from(subTopics);
+    const reorderedItem = items[sourceIndex];
+    
+    // Get the topic ID to identify the group
+    const topicId = reorderedItem.topicId?._id || reorderedItem.topicId;
 
-    // Optimistic UI update - work with filtered list but update full list
-    const filtered = [...filteredSubTopics];
-    const [removed] = filtered.splice(sourceIndex, 1);
-    filtered.splice(destinationIndex, 0, removed);
+    // Find all subTopics in the same group (same topic)
+    const groupSubTopics = items.filter((subTopic) => {
+      const subTopicTopicId = subTopic.topicId?._id || subTopic.topicId;
+      return subTopicTopicId === topicId;
+    });
 
-    // Update order numbers based on filtered list
-    const updatedSubTopics = filtered.map((subTopic, index) => ({
-      id: subTopic._id,
+    // Find indices within the group
+    const groupSourceIndex = groupSubTopics.findIndex(
+      (st) => (st._id || st.id) === (reorderedItem._id || reorderedItem.id)
+    );
+    
+    // Create a reordered group array
+    const reorderedGroup = Array.from(groupSubTopics);
+    const [movedSubTopic] = reorderedGroup.splice(groupSourceIndex, 1);
+    
+    // Calculate destination index within the group
+    const groupDestIndex = groupSubTopics.findIndex((subTopic, idx) => {
+      if (idx === groupSourceIndex) return false;
+      const flatIndex = items.findIndex(
+        (st) => (st._id || st.id) === (subTopic._id || subTopic.id)
+      );
+      return flatIndex >= destinationIndex;
+    });
+    const finalDestIndex = groupDestIndex === -1 ? reorderedGroup.length : groupDestIndex;
+    reorderedGroup.splice(finalDestIndex, 0, movedSubTopic);
+
+    // Update order numbers only for subTopics in this group
+    const updatedGroupSubTopics = reorderedGroup.map((subTopic, index) => ({
+      ...subTopic,
       orderNumber: index + 1,
     }));
 
-    // Update the full subTopics list
-    const updatedFullList = subTopics.map((st) => {
-      const updatedItem = updatedSubTopics.find((u) => u.id === st._id);
-      return updatedItem ? { ...st, orderNumber: updatedItem.orderNumber } : st;
+    // Update the full subTopics array, preserving other subTopics
+    const updatedItems = items.map((subTopic) => {
+      const updatedSubTopic = updatedGroupSubTopics.find(
+        (st) => (st._id || st.id) === (subTopic._id || subTopic.id)
+      );
+      return updatedSubTopic || subTopic;
     });
 
-    setSubTopics(updatedFullList);
+    setSubTopics(updatedItems);
 
     try {
+      // Prepare subTopics data for the reorder endpoint
+      const subTopicsData = updatedGroupSubTopics.map((subTopic) => ({
+        id: subTopic._id,
+        orderNumber: subTopic.orderNumber,
+      }));
+
       const response = await api.patch("/subtopic/reorder", {
-        subTopics: updatedSubTopics,
+        subTopics: subTopicsData,
       });
 
       if (response.data.success) {
         console.log(
-          `✅ Sub Topic "${reorderedItem.name}" moved to position ${
-            destinationIndex + 1
-          }`
+          `✅ Sub Topic "${reorderedItem.name}" moved to position ${finalDestIndex + 1}`
         );
       } else {
         throw new Error(

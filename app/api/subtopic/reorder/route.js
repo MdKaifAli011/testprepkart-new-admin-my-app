@@ -22,6 +22,48 @@ async function handleReorder(request) {
       );
     }
 
+    // Validate each subTopic object
+    for (const subTopic of subTopics) {
+      if (!subTopic.id || !subTopic.orderNumber) {
+        return NextResponse.json(
+          { success: false, message: "Each subTopic must have id and orderNumber" },
+          { status: 400 }
+        );
+      }
+      if (typeof subTopic.orderNumber !== 'number') {
+        return NextResponse.json(
+          { success: false, message: "orderNumber must be a number" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate that all subTopics belong to the same topic
+    const subTopicDocs = await SubTopic.find({ _id: { $in: subTopics.map(st => st.id) } })
+      .select('topicId');
+    
+    if (subTopicDocs.length !== subTopics.length) {
+      return NextResponse.json(
+        { success: false, message: "Some subTopics not found" },
+        { status: 404 }
+      );
+    }
+
+    const firstSubTopic = subTopicDocs[0];
+    const firstTopicId = firstSubTopic.topicId?.toString() || firstSubTopic.topicId;
+
+    for (let i = 1; i < subTopicDocs.length; i++) {
+      const subTopic = subTopicDocs[i];
+      const topicId = subTopic.topicId?.toString() || subTopic.topicId;
+      
+      if (topicId !== firstTopicId) {
+        return NextResponse.json(
+          { success: false, message: "All subTopics must belong to the same topic" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Two-step update to prevent duplicate key errors
     // Step 1: Set all subTopics to temporary high order numbers
     const tempUpdates = subTopics.map((subTopic, index) => ({
