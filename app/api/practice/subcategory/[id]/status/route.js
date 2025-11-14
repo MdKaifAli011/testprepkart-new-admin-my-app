@@ -9,10 +9,17 @@ import {
   notFoundResponse,
 } from "@/utils/apiResponse";
 import { ERROR_MESSAGES, STATUS } from "@/constants";
+import { requireAction } from "@/middleware/authMiddleware";
 
 // ---------- PATCH PRACTICE SUBCATEGORY STATUS ----------
 export async function PATCH(request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to update)
+    const authCheck = await requireAction(request, "PATCH");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();

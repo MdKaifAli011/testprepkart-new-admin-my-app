@@ -10,9 +10,16 @@ import {
   notFoundResponse,
 } from "@/utils/apiResponse";
 import { ERROR_MESSAGES } from "@/constants";
+import { requireAuth, requireAction } from "@/middleware/authMiddleware";
 
 export async function GET(request, { params }) {
   try {
+    // Check authentication (all authenticated users can view)
+    const authCheck = await requireAuth(request);
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 
@@ -39,6 +46,12 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to update)
+    const authCheck = await requireAction(request, "PUT");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();
@@ -119,6 +132,12 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to delete)
+    const authCheck = await requireAction(request, "DELETE");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 

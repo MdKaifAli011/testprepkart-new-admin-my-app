@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Topic from "@/models/Topic";
+import { requireAction } from "@/middleware/authMiddleware";
 
 export async function POST(request) {
   return handleReorder(request);
@@ -12,6 +13,12 @@ export async function PATCH(request) {
 
 async function handleReorder(request) {
   try {
+    // Check authentication and permissions (users need to be able to update)
+    const authCheck = await requireAction(request, "PATCH");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { topics } = await request.json();
 

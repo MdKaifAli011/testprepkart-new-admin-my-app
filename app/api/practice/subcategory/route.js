@@ -12,6 +12,7 @@ import {
   handleApiError,
 } from "@/utils/apiResponse";
 import { STATUS, ERROR_MESSAGES } from "@/constants";
+import { requireAuth, requireAction } from "@/middleware/authMiddleware";
 
 // Cache for frequently accessed queries
 export const queryCache = new Map();
@@ -20,6 +21,12 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // ---------- GET ALL PRACTICE SUBCATEGORIES (optimized) ----------
 export async function GET(request) {
   try {
+    // Check authentication (all authenticated users can view)
+    const authCheck = await requireAuth(request);
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { searchParams } = new URL(request.url);
 
@@ -98,6 +105,12 @@ export async function GET(request) {
 // ---------- CREATE PRACTICE SUBCATEGORY ----------
 export async function POST(request) {
   try {
+    // Check authentication and permissions (users need to be able to create)
+    const authCheck = await requireAction(request, "POST");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const body = await request.json();
     const {

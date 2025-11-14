@@ -4,10 +4,17 @@ import Topic from "@/models/Topic";
 // Import child model to ensure it's registered before middleware runs
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
+import { requireAction } from "@/middleware/authMiddleware";
 
 // ---------- PATCH TOPIC STATUS (with Cascading) ----------
 export async function PATCH(request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to update)
+    const authCheck = await requireAction(request, "PATCH");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();

@@ -12,10 +12,17 @@ import {
   notFoundResponse,
 } from "@/utils/apiResponse";
 import { ERROR_MESSAGES, STATUS } from "@/constants";
+import { requireAuth, requireAction } from "@/middleware/authMiddleware";
 
 // ---------- GET SINGLE PRACTICE SUBCATEGORY ----------
 export async function GET(_request, { params }) {
   try {
+    // Check authentication (all authenticated users can view)
+    const authCheck = await requireAuth(_request);
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 
@@ -44,6 +51,12 @@ export async function GET(_request, { params }) {
 // ---------- UPDATE PRACTICE SUBCATEGORY (FULL) ----------
 export async function PUT(request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to update)
+    const authCheck = await requireAction(request, "PUT");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();
@@ -195,6 +208,12 @@ export async function PUT(request, { params }) {
 // ---------- PATCH PRACTICE SUBCATEGORY (PARTIAL UPDATE) ----------
 export async function PATCH(request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to update)
+    const authCheck = await requireAction(request, "PATCH");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
     const body = await request.json();
@@ -332,6 +351,12 @@ export async function PATCH(request, { params }) {
 // ---------- DELETE PRACTICE SUBCATEGORY ----------
 export async function DELETE(_request, { params }) {
   try {
+    // Check authentication and permissions (users need to be able to delete)
+    const authCheck = await requireAction(_request, "DELETE");
+    if (authCheck.error) {
+      return NextResponse.json(authCheck, { status: authCheck.status || 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 
