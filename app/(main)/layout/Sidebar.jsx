@@ -82,7 +82,8 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   const [exams, setExams] = useState([]);
   const [activeExamId, setActiveExamId] = useState(null);
   const [tree, setTree] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [treeLoading, setTreeLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -130,22 +131,29 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     if (hasLoadedExamsRef.current) return;
     hasLoadedExamsRef.current = true;
     try {
+      setError("");
       const response = await fetchExams({ limit: 100 });
-      setExams(response);
+      setExams(response || []);
     } catch (err) {
+      console.error("Error loading exams:", err);
       setError("Unable to load exams.");
+      // Reset ref on error to allow retry
+      hasLoadedExamsRef.current = false;
     }
   }, []);
 
   const loadTree = useCallback(async (examId) => {
     if (!examId) {
       setTree([]);
+      setTreeLoading(false);
+      setError("");
       return;
     }
 
     if (treeCacheRef.current.has(examId)) {
       setTree(treeCacheRef.current.get(examId));
-      setLoading(false);
+      setTreeLoading(false);
+      setError("");
       return;
     }
 
@@ -154,68 +162,129 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     }
 
     treeLoadingRef.current.add(examId);
-    setLoading(true);
+    setTreeLoading(true);
     setError("");
 
     try {
       const subjects = await fetchSubjectsByExam(examId);
+      console.log("Sidebar: Fetched subjects for examId:", examId, "subjects:", subjects);
+      
       const orderedSubjects = (subjects || [])
         .filter((subject) => subject?.name)
         .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
 
+      console.log("Sidebar: Ordered subjects:", orderedSubjects);
+
+      if (orderedSubjects.length === 0) {
+        console.warn("Sidebar: No subjects found for examId:", examId);
+        setError("No subjects found for this exam.");
+        setTree([]);
+        setTreeLoading(false);
+        treeLoadingRef.current.delete(examId);
+        return;
+      }
+
       const subjectNodes = [];
 
       for (const subject of orderedSubjects) {
-        const subjectNode = {
-          ...buildNode(subject),
-          units: [],
-        };
-
-        const units = await fetchUnitsBySubject(subject._id, examId);
-        const orderedUnits = (units || [])
-          .filter((unit) => unit?.name)
-          .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
-
-        for (const unit of orderedUnits) {
-          const unitNode = {
-            ...buildNode(unit),
-            chapters: [],
+        try {
+          const subjectNode = {
+            ...buildNode(subject),
+            units: [],
           };
 
-          const chapters = await fetchChaptersByUnit(unit._id);
-          const orderedChapters = (chapters || [])
-            .filter((chapter) => chapter?.name)
+          const units = await fetchUnitsBySubject(subject._id, examId);
+          console.log(`Sidebar: Fetched units for subject ${subject._id}:`, units);
+          
+          const orderedUnits = (units || [])
+            .filter((unit) => unit?.name)
             .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
 
-          for (const chapter of orderedChapters) {
-            const chapterNode = {
-              ...buildNode(chapter),
-              topics: [],
-            };
+          for (const unit of orderedUnits) {
+            try {
+              const unitNode = {
+                ...buildNode(unit),
+                chapters: [],
+              };
 
-            const topics = await fetchTopicsByChapter(chapter._id);
-            const orderedTopics = (topics || [])
-              .filter((topic) => topic?.name)
-              .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0))
-              .map((topic) => buildNode(topic));
+              const chapters = await fetchChaptersByUnit(unit._id);
+              console.log(`Sidebar: Fetched chapters for unit ${unit._id}:`, chapters);
+              
+              const orderedChapters = (chapters || [])
+                .filter((chapter) => chapter?.name)
+                .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
 
-            chapterNode.topics = orderedTopics;
-            unitNode.chapters.push(chapterNode);
+              for (const chapter of orderedChapters) {
+                try {
+                  const chapterNode = {
+                    ...buildNode(chapter),
+                    topics: [],
+                  };
+
+                  const topics = await fetchTopicsByChapter(chapter._id);
+                  console.log(`Sidebar: Fetched topics for chapter ${chapter._id}:`, topics);
+                  
+                  const orderedTopics = (topics || [])
+                    .filter((topic) => topic?.name)
+                    .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0))
+                    .map((topic) => buildNode(topic));
+
+                  chapterNode.topics = orderedTopics;
+                  unitNode.chapters.push(chapterNode);
+                } catch (topicErr) {
+                  console.error(`Error loading topics for chapter ${chapter._id}:`, topicErr);
+                  // Continue with empty topics array
+                  unitNode.chapters.push({
+                    ...buildNode(chapter),
+                    topics: [],
+                  });
+                }
+              }
+
+              subjectNode.units.push(unitNode);
+            } catch (chapterErr) {
+              console.error(`Error loading chapters for unit ${unit._id}:`, chapterErr);
+              // Continue with empty chapters array
+              subjectNode.units.push({
+                ...buildNode(unit),
+                chapters: [],
+              });
+            }
           }
 
-          subjectNode.units.push(unitNode);
+          subjectNodes.push(subjectNode);
+        } catch (unitErr) {
+          console.error(`Error loading units for subject ${subject._id}:`, unitErr);
+          // Continue with empty units array
+          subjectNodes.push({
+            ...buildNode(subject),
+            units: [],
+          });
         }
-
-        subjectNodes.push(subjectNode);
       }
 
-      treeCacheRef.current.set(examId, subjectNodes);
-      setTree(subjectNodes);
+      console.log("Sidebar: Built subject nodes:", subjectNodes);
+      
+      if (subjectNodes.length === 0) {
+        console.warn("Sidebar: No subject nodes built for examId:", examId);
+        setError("No navigation data available for this exam.");
+        setTree([]);
+      } else {
+        treeCacheRef.current.set(examId, subjectNodes);
+        setTree(subjectNodes);
+        setError("");
+      }
     } catch (err) {
+      console.error("Error loading sidebar tree:", err);
+      console.error("Error details:", {
+        message: err.message,
+        stack: err.stack,
+        examId,
+      });
       setError("Unable to load sidebar content.");
       setTree([]);
     } finally {
-      setLoading(false);
+      setTreeLoading(false);
       treeLoadingRef.current.delete(examId);
     }
   }, []);
@@ -230,15 +299,20 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     const matchedExam =
       findByIdOrSlug(exams, examSlugFromPath) || exams[0] || null;
 
-    if (matchedExam && matchedExam._id !== activeExamId) {
+    if (matchedExam?._id && matchedExam._id !== activeExamId) {
       setActiveExamId(matchedExam._id);
+    } else if (!matchedExam && activeExamId && examSlugFromPath) {
+      // If exam from path doesn't match any exam, clear activeExamId
+      // This handles cases where user navigates to a non-existent exam
+      setActiveExamId(null);
     }
-  }, [exams, examSlugFromPath, activeExamId]);
+  }, [exams, examSlugFromPath]);
 
   useEffect(() => {
     if (!activeExamId) {
       setTree([]);
-      setLoading(false);
+      setTreeLoading(false);
+      setError("");
       return;
     }
 
@@ -361,13 +435,13 @@ const Sidebar = ({ isOpen = false, onClose }) => {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {loading && renderLoading()}
-            {!loading && error && (
+            {treeLoading && renderLoading()}
+            {!treeLoading && error && (
               <div className="px-4 py-6 text-sm text-red-600">{error}</div>
             )}
-            {!loading && !error && filteredTree.length === 0 && renderEmpty()}
+            {!treeLoading && !error && filteredTree.length === 0 && renderEmpty()}
 
-            {!loading && !error && filteredTree.length > 0 && (
+            {!treeLoading && !error && filteredTree.length > 0 && (
               <div className="px-3 py-4">
                 <ul className="space-y-2">
                   {filteredTree.map((subject) => {

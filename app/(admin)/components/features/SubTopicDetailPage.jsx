@@ -32,18 +32,32 @@ const SubTopicDetailPage = ({ subTopicId }) => {
     isFetchingRef.current = true;
     try {
       setIsLoading(true);
-      const response = await api.get(`/subtopic/${subTopicId}`);
-      if (response.data.success) {
-        const subTopicData = response.data.data;
+      // Fetch main subtopic and details in parallel
+      const [subTopicRes, detailsRes] = await Promise.all([
+        api.get(`/subtopic/${subTopicId}`),
+        api.get(`/subtopic/${subTopicId}/details`),
+      ]);
+      
+      if (subTopicRes.data.success) {
+        const subTopicData = subTopicRes.data.data;
         setSubTopic(subTopicData);
+        
+        // Get details or use defaults
+        const details = detailsRes.data?.success ? detailsRes.data.data : {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        };
+        
         setFormData({
           name: subTopicData.name || "",
-          content: subTopicData.content || "",
-          title: subTopicData.title || "",
-          metaDescription: subTopicData.metaDescription || "",
-          keywords: subTopicData.keywords || "",
+          content: details.content || "",
+          title: details.title || "",
+          metaDescription: details.metaDescription || "",
+          keywords: details.keywords || "",
         });
-      } else setError(response.data.message || "Failed to fetch subtopic");
+      } else setError(subTopicRes.data.message || "Failed to fetch subtopic");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch subtopic");
     } finally {
@@ -69,12 +83,24 @@ const SubTopicDetailPage = ({ subTopicId }) => {
 
     try {
       setIsSaving(true);
-      const response = await api.put(`/subtopic/${subTopicId}`, formData);
-      if (response.data.success) {
-        setSubTopic(response.data.data);
+      // Save main subtopic and details separately
+      const [subTopicRes, detailsRes] = await Promise.all([
+        api.put(`/subtopic/${subTopicId}`, { name: formData.name }),
+        api.put(`/subtopic/${subTopicId}/details`, {
+          content: formData.content,
+          title: formData.title,
+          metaDescription: formData.metaDescription,
+          keywords: formData.keywords,
+        }),
+      ]);
+      
+      if (subTopicRes.data.success && detailsRes.data?.success) {
+        setSubTopic(subTopicRes.data.data);
         success("SubTopic details saved successfully!");
         setIsEditing(false);
-      } else showError(response.data.message || "Failed to update subtopic");
+      } else {
+        showError(subTopicRes.data.message || detailsRes.data?.message || "Failed to update subtopic");
+      }
     } catch (err) {
       showError(err.response?.data?.message || "Failed to update subtopic");
     } finally {

@@ -66,7 +66,7 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, examId, subjectId, unitId, orderNumber, weightage, time, questions, status, content, title, metaDescription, keywords } = body;
+    const { name, examId, subjectId, unitId, orderNumber, weightage, time, questions, status } = body;
 
     // Validation
     if (!name || !examId || !subjectId || !unitId) {
@@ -114,7 +114,7 @@ export async function POST(request) {
       finalOrderNumber = lastChapter ? lastChapter.orderNumber + 1 : 1;
     }
 
-    // Create new chapter
+    // Create new chapter (content/SEO fields are now in ChapterDetails)
     const chapter = await Chapter.create({
       name: chapterName,
       examId,
@@ -125,10 +125,6 @@ export async function POST(request) {
       time: time || 0,
       questions: questions || 0,
       status: status || STATUS.ACTIVE,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     });
 
     // Populate the data before returning

@@ -25,6 +25,7 @@ import {
   fetchChaptersByUnit,
   createSlug,
   findByIdOrSlug,
+  fetchUnitDetailsById,
 } from "../../../lib/api";
 import {
   getNextUnit,
@@ -130,6 +131,7 @@ const UnitPage = () => {
   const [exam, setExam] = useState(null);
   const [subject, setSubject] = useState(null);
   const [unit, setUnit] = useState(null);
+  const [unitDetails, setUnitDetails] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [units, setUnits] = useState([]);
   const [currentUnitIndex, setCurrentUnitIndex] = useState(-1);
@@ -182,9 +184,18 @@ const UnitPage = () => {
           return;
         }
         
-        // Fetch full unit data including content
+        // Fetch full unit data
         const fullUnitData = await fetchUnitById(foundUnit._id);
         setUnit(fullUnitData || foundUnit);
+
+        // Fetch unit details separately
+        const details = await fetchUnitDetailsById(foundUnit._id);
+        setUnitDetails(details || {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        });
 
         // Find current unit index for navigation
         const unitIndex = fetchedUnits.findIndex(
@@ -311,8 +322,8 @@ const UnitPage = () => {
                 {
                   Overview: (
                     <div className="space-y-4">
-                      {unit?.content ? (
-                        <RichContent html={unit.content} />
+                      {unitDetails?.content ? (
+                        <RichContent html={unitDetails.content} />
                       ) : (
                         <>
                           <h3 className="text-xl font-bold text-gray-900 mb-2">

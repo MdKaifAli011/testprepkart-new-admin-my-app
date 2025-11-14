@@ -32,18 +32,32 @@ const TopicDetailPage = ({ topicId }) => {
     isFetchingRef.current = true;
     try {
       setIsLoading(true);
-      const response = await api.get(`/topic/${topicId}`);
-      if (response.data.success) {
-        const topicData = response.data.data;
+      // Fetch main topic and details in parallel
+      const [topicRes, detailsRes] = await Promise.all([
+        api.get(`/topic/${topicId}`),
+        api.get(`/topic/${topicId}/details`),
+      ]);
+      
+      if (topicRes.data.success) {
+        const topicData = topicRes.data.data;
         setTopic(topicData);
+        
+        // Get details or use defaults
+        const details = detailsRes.data?.success ? detailsRes.data.data : {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        };
+        
         setFormData({
           name: topicData.name || "",
-          content: topicData.content || "",
-          title: topicData.title || "",
-          metaDescription: topicData.metaDescription || "",
-          keywords: topicData.keywords || "",
+          content: details.content || "",
+          title: details.title || "",
+          metaDescription: details.metaDescription || "",
+          keywords: details.keywords || "",
         });
-      } else setError(response.data.message || "Failed to fetch topic");
+      } else setError(topicRes.data.message || "Failed to fetch topic");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch topic");
     } finally {
@@ -65,12 +79,24 @@ const TopicDetailPage = ({ topicId }) => {
 
     try {
       setIsSaving(true);
-      const response = await api.put(`/topic/${topicId}`, formData);
-      if (response.data.success) {
-        setTopic(response.data.data);
+      // Save main topic and details separately
+      const [topicRes, detailsRes] = await Promise.all([
+        api.put(`/topic/${topicId}`, { name: formData.name }),
+        api.put(`/topic/${topicId}/details`, {
+          content: formData.content,
+          title: formData.title,
+          metaDescription: formData.metaDescription,
+          keywords: formData.keywords,
+        }),
+      ]);
+      
+      if (topicRes.data.success && detailsRes.data?.success) {
+        setTopic(topicRes.data.data);
         success("Topic details saved successfully!");
         setIsEditing(false);
-      } else showError(response.data.message || "Failed to update topic");
+      } else {
+        showError(topicRes.data.message || detailsRes.data?.message || "Failed to update topic");
+      }
     } catch (err) {
       showError(err.response?.data?.message || "Failed to update topic");
     } finally {

@@ -163,6 +163,7 @@ export async function POST(request) {
         finalOrderNumber = last ? last.orderNumber + 1 : 1;
       }
 
+      // Create new subtopic (content/SEO fields are now in SubTopicDetails)
       const doc = await SubTopic.create({
         name: subTopicName,
         examId: item.examId,
@@ -172,10 +173,6 @@ export async function POST(request) {
         topicId,
         orderNumber: finalOrderNumber,
         status: item.status || STATUS.ACTIVE,
-        content: item.content || "",
-        title: item.title || "",
-        metaDescription: item.metaDescription || "",
-        keywords: item.keywords || "",
       });
       createdIds.push(doc._id);
     }

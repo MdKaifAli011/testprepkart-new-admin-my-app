@@ -32,18 +32,32 @@ const UnitDetailPage = ({ unitId }) => {
     isFetchingRef.current = true;
     try {
       setIsLoading(true);
-      const res = await api.get(`/unit/${unitId}`);
-      if (res.data?.success) {
-        const data = res.data.data;
+      // Fetch main unit and details in parallel
+      const [unitRes, detailsRes] = await Promise.all([
+        api.get(`/unit/${unitId}`),
+        api.get(`/unit/${unitId}/details`),
+      ]);
+      
+      if (unitRes.data?.success) {
+        const data = unitRes.data.data;
         setUnit(data);
+        
+        // Get details or use defaults
+        const details = detailsRes.data?.success ? detailsRes.data.data : {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        };
+        
         setFormData({
           name: data.name || "",
-          content: data.content || "",
-          title: data.title || "",
-          metaDescription: data.metaDescription || "",
-          keywords: data.keywords || "",
+          content: details.content || "",
+          title: details.title || "",
+          metaDescription: details.metaDescription || "",
+          keywords: details.keywords || "",
         });
-      } else setError(res.data?.message || "Failed to fetch unit details");
+      } else setError(unitRes.data?.message || "Failed to fetch unit details");
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to fetch unit details");
     } finally {
@@ -68,12 +82,24 @@ const UnitDetailPage = ({ unitId }) => {
 
     try {
       setIsSaving(true);
-      const res = await api.put(`/unit/${unitId}`, formData);
-      if (res.data?.success) {
+      // Save main unit and details separately
+      const [unitRes, detailsRes] = await Promise.all([
+        api.put(`/unit/${unitId}`, { name: formData.name }),
+        api.put(`/unit/${unitId}/details`, {
+          content: formData.content,
+          title: formData.title,
+          metaDescription: formData.metaDescription,
+          keywords: formData.keywords,
+        }),
+      ]);
+      
+      if (unitRes.data?.success && detailsRes.data?.success) {
         success("Unit details saved successfully!");
-        setUnit(res.data.data);
+        setUnit(unitRes.data.data);
         setIsEditing(false);
-      } else showError(res.data?.message || "Save failed");
+      } else {
+        showError(unitRes.data?.message || detailsRes.data?.message || "Save failed");
+      }
     } catch (err) {
       showError(err?.response?.data?.message || "Save failed");
     } finally {

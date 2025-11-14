@@ -37,29 +37,6 @@ const topicSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-    // Rich text content
-    content: {
-      type: String,
-      default: "",
-    },
-    // seo title
-    title: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    // seo description
-    metaDescription: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    // seo keywords
-    keywords: {
-      type: String,
-      trim: true,
-      default: "",
-    },
   },
   { timestamps: true }
 );
@@ -76,8 +53,15 @@ topicSchema.pre("findOneAndDelete", async function () {
         `🗑️ Cascading delete: Deleting all entities for topic ${topic._id}`
       );
 
-      // Get model - use mongoose.model() to ensure model is loaded
+      // Get models - use mongoose.model() to ensure models are loaded
       const SubTopic = mongoose.models.SubTopic || mongoose.model("SubTopic");
+      const TopicDetails = mongoose.models.TopicDetails || mongoose.model("TopicDetails");
+
+      // Delete topic details first
+      const topicDetailsResult = await TopicDetails.deleteMany({ topicId: topic._id });
+      console.log(
+        `🗑️ Cascading delete: Deleted ${topicDetailsResult.deletedCount} TopicDetails for topic ${topic._id}`
+      );
 
       const result = await SubTopic.deleteMany({ topicId: topic._id });
       console.log(

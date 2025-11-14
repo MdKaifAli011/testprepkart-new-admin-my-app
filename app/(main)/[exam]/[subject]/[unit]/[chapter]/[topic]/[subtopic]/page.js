@@ -26,6 +26,7 @@ import {
   fetchSubTopicById,
   createSlug,
   findByIdOrSlug,
+  fetchSubTopicDetailsById,
 } from "../../../../../../lib/api";
 import {
   getNextSubtopic,
@@ -141,6 +142,7 @@ const SubTopicPage = () => {
   const [chapter, setChapter] = useState(null);
   const [topic, setTopic] = useState(null);
   const [subTopic, setSubTopic] = useState(null);
+  const [subTopicDetails, setSubTopicDetails] = useState(null);
   const [allSubTopics, setAllSubTopics] = useState([]);
   const [currentSubTopicIndex, setCurrentSubTopicIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(true);
@@ -234,9 +236,18 @@ const SubTopicPage = () => {
           return;
         }
         
-        // Fetch full subtopic data including content
+        // Fetch full subtopic data
         const fullSubTopicData = await fetchSubTopicById(foundSubTopic._id);
         setSubTopic(fullSubTopicData || foundSubTopic);
+
+        // Fetch subtopic details separately
+        const details = await fetchSubTopicDetailsById(foundSubTopic._id);
+        setSubTopicDetails(details || {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        });
 
         // Find current subtopic index for navigation
         const index = fetchedSubTopics.findIndex(
@@ -384,8 +395,8 @@ const SubTopicPage = () => {
               {
                 Overview: (
                   <div>
-                    {subTopic?.content ? (
-                      <RichContent html={subTopic.content} />
+                    {subTopicDetails?.content ? (
+                      <RichContent html={subTopicDetails.content} />
                     ) : (
                       <>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">

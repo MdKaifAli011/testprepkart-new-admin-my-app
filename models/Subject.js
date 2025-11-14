@@ -23,28 +23,6 @@ const subjectSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-    content: {
-      type: String,
-      default: "",
-    },
-        // seo title
-        title: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo description
-        metaDescription: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo keywords
-        keywords: {
-          type: String,
-          trim: true,
-          default: "",
-        },
   },
   { timestamps: true }
 );
@@ -70,6 +48,13 @@ subjectSchema.pre("findOneAndDelete", async function () {
       const Chapter = mongoose.models.Chapter || mongoose.model("Chapter");
       const Topic = mongoose.models.Topic || mongoose.model("Topic");
       const SubTopic = mongoose.models.SubTopic || mongoose.model("SubTopic");
+      const SubjectDetails = mongoose.models.SubjectDetails || mongoose.model("SubjectDetails");
+
+      // Delete subject details first
+      const subjectDetailsResult = await SubjectDetails.deleteMany({ subjectId: subject._id });
+      console.log(
+        `🗑️ Cascading delete: Deleted ${subjectDetailsResult.deletedCount} SubjectDetails for subject ${subject._id}`
+      );
 
       // Find all units in this subject
       const units = await Unit.find({ subjectId: subject._id });

@@ -42,7 +42,7 @@ export async function PUT(request, { params }) {
       return errorResponse("Invalid subtopic ID", 400);
     }
 
-    const { name, examId, subjectId, unitId, chapterId, topicId, orderNumber, status, content, title, metaDescription, keywords } = body;
+    const { name, examId, subjectId, unitId, chapterId, topicId, orderNumber, status } = body;
 
     // Validate required fields
     if (!name || name.trim() === "") {
@@ -58,16 +58,10 @@ export async function PUT(request, { params }) {
     // Capitalize first letter of each word in subtopic name
     const subTopicName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
 
-    // Prepare update data
+    // Prepare update data (content/SEO fields are now in SubTopicDetails)
     const updateData = {
       name: subTopicName,
     };
-
-    // Only update fields that are provided
-    if (content !== undefined) updateData.content = content;
-    if (title !== undefined) updateData.title = title;
-    if (metaDescription !== undefined) updateData.metaDescription = metaDescription;
-    if (keywords !== undefined) updateData.keywords = keywords;
     if (examId) updateData.examId = examId;
     if (subjectId) updateData.subjectId = subjectId;
     if (unitId) updateData.unitId = unitId;

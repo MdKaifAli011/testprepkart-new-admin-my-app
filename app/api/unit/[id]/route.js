@@ -44,7 +44,7 @@ export async function PUT(request, { params }) {
       return errorResponse("Invalid unit ID", 400);
     }
 
-    const { name, orderNumber, subjectId, examId, status, content, title, metaDescription, keywords } = body;
+    const { name, orderNumber, subjectId, examId, status } = body;
 
     // Validate required fields
     if (!name || name.trim() === "") {
@@ -60,13 +60,9 @@ export async function PUT(request, { params }) {
     // Capitalize first letter of each word in unit name
     const unitName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
 
-    // Prepare update data
+    // Prepare update data (content/SEO fields are now in UnitDetails)
     const updateData = {
       name: unitName,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     };
 
     if (orderNumber !== undefined) updateData.orderNumber = orderNumber;

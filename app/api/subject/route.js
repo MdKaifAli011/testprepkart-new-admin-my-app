@@ -96,7 +96,7 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, examId, orderNumber, status, content, title, metaDescription, keywords } = body;
+    const { name, examId, orderNumber, status } = body;
 
     // Validate required fields
     if (!name || !examId) {
@@ -137,16 +137,12 @@ export async function POST(request) {
       finalOrderNumber = maxOrderDoc ? (maxOrderDoc.orderNumber || 0) + 1 : 1;
     }
 
-    // Create new subject
+    // Create new subject (content/SEO fields are now in SubjectDetails)
     const subject = await Subject.create({
       name: subjectName,
       examId,
       orderNumber: finalOrderNumber,
       status: status || STATUS.ACTIVE,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     });
 
     // Populate the exam data before returning

@@ -27,6 +27,7 @@ import {
   fetchSubTopicsByTopic,
   createSlug,
   findByIdOrSlug,
+  fetchTopicDetailsById,
 } from "../../../../../lib/api";
 import {
   getNextTopic,
@@ -140,6 +141,7 @@ const TopicPage = () => {
   const [unit, setUnit] = useState(null);
   const [chapter, setChapter] = useState(null);
   const [topic, setTopic] = useState(null);
+  const [topicDetails, setTopicDetails] = useState(null);
   const [subTopics, setSubTopics] = useState([]);
   const [allTopics, setAllTopics] = useState([]);
   const [currentTopicIndex, setCurrentTopicIndex] = useState(-1);
@@ -220,9 +222,18 @@ const TopicPage = () => {
           return;
         }
         
-        // Fetch full topic data including content
+        // Fetch full topic data
         const fullTopicData = await fetchTopicById(foundTopic._id);
         setTopic(fullTopicData || foundTopic);
+
+        // Fetch topic details separately
+        const details = await fetchTopicDetailsById(foundTopic._id);
+        setTopicDetails(details || {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        });
 
         // Find current topic index for navigation
         const index = fetchedTopics.findIndex(
@@ -359,8 +370,8 @@ const TopicPage = () => {
               {
                 Overview: (
                   <div>
-                    {topic?.content ? (
-                      <RichContent html={topic.content} />
+                    {topicDetails?.content ? (
+                      <RichContent html={topicDetails.content} />
                     ) : (
                       <>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">

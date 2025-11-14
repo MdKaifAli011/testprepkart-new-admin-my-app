@@ -106,7 +106,7 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, orderNumber, subjectId, examId, status, content, title, metaDescription, keywords } = body;
+    const { name, orderNumber, subjectId, examId, status } = body;
 
     // Validate required fields
     if (!name || !subjectId || !examId) {
@@ -160,17 +160,13 @@ export async function POST(request) {
       finalOrderNumber = lastUnit ? lastUnit.orderNumber + 1 : 1;
     }
 
-    // Create new unit
+    // Create new unit (content/SEO fields are now in UnitDetails)
     const unit = await Unit.create({
       name: unitName,
       orderNumber: finalOrderNumber,
       subjectId,
       examId,
       status: status || STATUS.ACTIVE,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     });
 
     // Populate the data before returning

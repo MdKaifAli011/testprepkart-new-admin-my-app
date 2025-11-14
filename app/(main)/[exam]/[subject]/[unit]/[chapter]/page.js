@@ -19,6 +19,7 @@ import {
   fetchTopicsByChapter,
   createSlug,
   findByIdOrSlug,
+  fetchChapterDetailsById,
 } from "../../../../lib/api";
 import {
   getNextChapter,
@@ -130,6 +131,7 @@ const ChapterPage = () => {
   const [subject, setSubject] = useState(null);
   const [unit, setUnit] = useState(null);
   const [chapter, setChapter] = useState(null);
+  const [chapterDetails, setChapterDetails] = useState(null);
   const [topics, setTopics] = useState([]);
   const [chapters, setChapters] = useState([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(-1);
@@ -196,9 +198,18 @@ const ChapterPage = () => {
           return;
         }
         
-        // Fetch full chapter data including content
+        // Fetch full chapter data
         const fullChapterData = await fetchChapterById(foundChapter._id);
         setChapter(fullChapterData || foundChapter);
+
+        // Fetch chapter details separately
+        const details = await fetchChapterDetailsById(foundChapter._id);
+        setChapterDetails(details || {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        });
 
         // Find current chapter index for navigation
         const chapterIndex = fetchedChapters.findIndex(
@@ -330,8 +341,8 @@ const ChapterPage = () => {
               {
                 Overview: (
                   <div>
-                    {chapter?.content ? (
-                      <RichContent html={chapter.content} />
+                    {chapterDetails?.content ? (
+                      <RichContent html={chapterDetails.content} />
                     ) : (
                       <>
                         <h3 className="text-xl font-bold text-gray-900 mb-2">

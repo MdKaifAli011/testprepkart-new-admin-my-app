@@ -42,7 +42,7 @@ export async function PUT(request, { params }) {
       return errorResponse("Invalid chapter ID", 400);
     }
 
-    const { name, examId, subjectId, unitId, orderNumber, weightage, time, questions, status, content, title, metaDescription, keywords } = body;
+    const { name, examId, subjectId, unitId, orderNumber, weightage, time, questions, status } = body;
 
     // Validate required fields
     if (!name || name.trim() === "") {
@@ -58,13 +58,9 @@ export async function PUT(request, { params }) {
     // Capitalize first letter of each word in chapter name
     const chapterName = name.trim().replace(/\b\w/g, (l) => l.toUpperCase());
 
-    // Prepare update data
+    // Prepare update data (content/SEO fields are now in ChapterDetails)
     const updateData = {
       name: chapterName,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     };
 
     if (examId) updateData.examId = examId;

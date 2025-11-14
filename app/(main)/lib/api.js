@@ -162,22 +162,60 @@ export const fetchExamById = async (examId) => {
 export const fetchSubjectsByExam = async (examId, options = {}) => {
   try {
     const { page = 1, limit = 100 } = options;
-    const response = await api.get(
-      `/subject?examId=${examId}&page=${page}&limit=${limit}&status=${STATUS.ACTIVE}`
-    );
+    
+    if (!examId) {
+      logger.warn("fetchSubjectsByExam: No examId provided");
+      return [];
+    }
+    
+    const url = `/subject?examId=${examId}&page=${page}&limit=${limit}&status=${STATUS.ACTIVE}`;
+    logger.info("fetchSubjectsByExam: Fetching from URL:", url);
+    
+    const response = await api.get(url);
 
-    if (response.data.success) {
-      // Handle paginated response
+    logger.info("fetchSubjectsByExam: Response received:", {
+      success: response.data?.success,
+      hasPagination: !!response.data?.pagination,
+      dataLength: response.data?.data?.length,
+      examId,
+    });
+
+    if (response.data?.success) {
+      const subjects = response.data.data || [];
+      
+      // Handle paginated response - API already filters by examId, but let's verify
       if (response.data.pagination) {
-        return response.data.data || [];
+        // Double-check that subjects belong to the correct exam
+        const validSubjects = subjects.filter((subject) => {
+          const subjectExamId = subject.examId?._id || subject.examId;
+          const matchesExam = 
+            String(subjectExamId) === String(examId) ||
+            subject.examId?.name?.toLowerCase() === String(examId).toLowerCase();
+          const matchesStatus = subject.status
+            ? subject.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
+            : false;
+          return matchesExam && matchesStatus;
+        });
+        
+        logger.info("fetchSubjectsByExam: Filtered subjects:", {
+          originalCount: subjects.length,
+          filteredCount: validSubjects.length,
+          examId,
+        });
+        
+        // Sort by orderNumber
+        return validSubjects.sort(
+          (a, b) => (a.orderNumber || 0) - (b.orderNumber || 0)
+        );
       }
+      
       // Handle legacy response format
-      const allSubjects = response.data.data || [];
-      const filteredSubjects = allSubjects.filter((subject) => {
+      const filteredSubjects = subjects.filter((subject) => {
+        const subjectExamId = subject.examId?._id || subject.examId;
         const matchesExam =
-          subject.examId?._id === examId ||
+          String(subjectExamId) === String(examId) ||
           subject.examId === examId ||
-          subject.examId?.name?.toLowerCase() === examId?.toLowerCase();
+          subject.examId?.name?.toLowerCase() === String(examId).toLowerCase();
         const matchesStatus = subject.status
           ? subject.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
           : false;
@@ -188,9 +226,16 @@ export const fetchSubjectsByExam = async (examId, options = {}) => {
         (a, b) => (a.orderNumber || 0) - (b.orderNumber || 0)
       );
     }
+    
+    logger.warn("fetchSubjectsByExam: Response not successful:", response.data);
     return [];
   } catch (error) {
     logger.error("Error fetching subjects:", error);
+    logger.error("Error details:", {
+      message: error.message,
+      response: error.response?.data,
+      examId,
+    });
     return [];
   }
 };
@@ -611,6 +656,322 @@ export const fetchSubTopicById = async (subTopicId) => {
   // Note: This fallback requires a topicId, so it may not work perfectly
   // For now, we'll return null if we can't find by ID
   return null;
+};
+
+// ========== DETAILS FETCHING FUNCTIONS ==========
+// These functions fetch Details (content and SEO fields) separately from main entities
+
+// Fetch exam details (content, title, metaDescription, keywords)
+export const fetchExamDetailsById = async (examId) => {
+  if (!examId) return null;
+
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
+  try {
+    if (isServer) {
+      const response = await fetch(`${baseUrl}/api/exam/${examId}/details`, {
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          return data.data;
+        }
+      }
+      // If no details exist, return defaults
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    } else {
+      try {
+        const response = await api.get(`/exam/${examId}/details`);
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+      } catch (error) {
+        // If no details exist, return defaults
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    }
+  } catch (error) {
+    logger.warn("Error fetching exam details:", error);
+    return {
+      content: "",
+      title: "",
+      metaDescription: "",
+      keywords: "",
+    };
+  }
+};
+
+// Fetch subject details
+export const fetchSubjectDetailsById = async (subjectId) => {
+  if (!subjectId) return null;
+
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
+  try {
+    if (isServer) {
+      const response = await fetch(`${baseUrl}/api/subject/${subjectId}/details`, {
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          return data.data;
+        }
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    } else {
+      try {
+        const response = await api.get(`/subject/${subjectId}/details`);
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+      } catch (error) {
+        // If no details exist, return defaults
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    }
+  } catch (error) {
+    logger.warn("Error fetching subject details:", error);
+    return {
+      content: "",
+      title: "",
+      metaDescription: "",
+      keywords: "",
+    };
+  }
+};
+
+// Fetch unit details
+export const fetchUnitDetailsById = async (unitId) => {
+  if (!unitId) return null;
+
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
+  try {
+    if (isServer) {
+      const response = await fetch(`${baseUrl}/api/unit/${unitId}/details`, {
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          return data.data;
+        }
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    } else {
+      try {
+        const response = await api.get(`/unit/${unitId}/details`);
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+      } catch (error) {
+        // If no details exist, return defaults
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    }
+  } catch (error) {
+    logger.warn("Error fetching unit details:", error);
+    return {
+      content: "",
+      title: "",
+      metaDescription: "",
+      keywords: "",
+    };
+  }
+};
+
+// Fetch chapter details
+export const fetchChapterDetailsById = async (chapterId) => {
+  if (!chapterId) return null;
+
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
+  try {
+    if (isServer) {
+      const response = await fetch(`${baseUrl}/api/chapter/${chapterId}/details`, {
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          return data.data;
+        }
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    } else {
+      try {
+        const response = await api.get(`/chapter/${chapterId}/details`);
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+      } catch (error) {
+        // If no details exist, return defaults
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    }
+  } catch (error) {
+    logger.warn("Error fetching chapter details:", error);
+    return {
+      content: "",
+      title: "",
+      metaDescription: "",
+      keywords: "",
+    };
+  }
+};
+
+// Fetch topic details
+export const fetchTopicDetailsById = async (topicId) => {
+  if (!topicId) return null;
+
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
+  try {
+    if (isServer) {
+      const response = await fetch(`${baseUrl}/api/topic/${topicId}/details`, {
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          return data.data;
+        }
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    } else {
+      try {
+        const response = await api.get(`/topic/${topicId}/details`);
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+      } catch (error) {
+        // If no details exist, return defaults
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    }
+  } catch (error) {
+    logger.warn("Error fetching topic details:", error);
+    return {
+      content: "",
+      title: "",
+      metaDescription: "",
+      keywords: "",
+    };
+  }
+};
+
+// Fetch subtopic details
+export const fetchSubTopicDetailsById = async (subTopicId) => {
+  if (!subTopicId) return null;
+
+  const isServer = typeof window === "undefined";
+  const baseUrl = getBaseUrl();
+
+  try {
+    if (isServer) {
+      const response = await fetch(`${baseUrl}/api/subtopic/${subTopicId}/details`, {
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          return data.data;
+        }
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    } else {
+      try {
+        const response = await api.get(`/subtopic/${subTopicId}/details`);
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+      } catch (error) {
+        // If no details exist, return defaults
+      }
+      return {
+        content: "",
+        title: "",
+        metaDescription: "",
+        keywords: "",
+      };
+    }
+  } catch (error) {
+    logger.warn("Error fetching subtopic details:", error);
+    return {
+      content: "",
+      title: "",
+      metaDescription: "",
+      keywords: "",
+    };
+  }
 };
 
 // Re-export slug utilities for backward compatibility

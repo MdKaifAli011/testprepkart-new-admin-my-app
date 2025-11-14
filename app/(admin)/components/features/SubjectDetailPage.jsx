@@ -32,18 +32,32 @@ const SubjectDetailPage = ({ subjectId }) => {
     isFetchingRef.current = true;
     try {
       setIsLoading(true);
-      const res = await api.get(`/subject/${subjectId}`);
-      if (res.data?.success) {
-        const data = res.data.data;
+      // Fetch main subject and details in parallel
+      const [subjectRes, detailsRes] = await Promise.all([
+        api.get(`/subject/${subjectId}`),
+        api.get(`/subject/${subjectId}/details`),
+      ]);
+      
+      if (subjectRes.data?.success) {
+        const data = subjectRes.data.data;
         setSubject(data);
+        
+        // Get details or use defaults
+        const details = detailsRes.data?.success ? detailsRes.data.data : {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        };
+        
         setFormData({
           name: data.name || "",
-          content: data.content || "",
-          title: data.title || "",
-          metaDescription: data.metaDescription || "",
-          keywords: data.keywords || "",
+          content: details.content || "",
+          title: details.title || "",
+          metaDescription: details.metaDescription || "",
+          keywords: details.keywords || "",
         });
-      } else setError(res.data?.message || "Failed to fetch subject details");
+      } else setError(subjectRes.data?.message || "Failed to fetch subject details");
     } catch (err) {
       setError(
         err?.response?.data?.message || "Failed to fetch subject details"
@@ -74,12 +88,24 @@ const SubjectDetailPage = ({ subjectId }) => {
 
     try {
       setIsSaving(true);
-      const res = await api.put(`/subject/${subjectId}`, formData);
-      if (res.data?.success) {
+      // Save main subject and details separately
+      const [subjectRes, detailsRes] = await Promise.all([
+        api.put(`/subject/${subjectId}`, { name: formData.name }),
+        api.put(`/subject/${subjectId}/details`, {
+          content: formData.content,
+          title: formData.title,
+          metaDescription: formData.metaDescription,
+          keywords: formData.keywords,
+        }),
+      ]);
+      
+      if (subjectRes.data?.success && detailsRes.data?.success) {
         success("Subject details saved successfully!");
-        setSubject(res.data.data);
+        setSubject(subjectRes.data.data);
         setIsEditing(false);
-      } else showError(res.data?.message || "Save failed");
+      } else {
+        showError(subjectRes.data?.message || detailsRes.data?.message || "Save failed");
+      }
     } catch (err) {
       showError(err?.response?.data?.message || "Save failed");
     } finally {

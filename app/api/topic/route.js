@@ -169,6 +169,7 @@ export async function POST(request) {
         finalOrderNumber = lastTopic ? lastTopic.orderNumber + 1 : 1;
       }
 
+      // Create new topic (content/SEO fields are now in TopicDetails)
       const doc = await Topic.create({
         name: topicName,
         examId: item.examId,
@@ -177,10 +178,6 @@ export async function POST(request) {
         chapterId,
         orderNumber: finalOrderNumber,
         status: item.status || STATUS.ACTIVE,
-        content: item.content || "",
-        title: item.title || "",
-        metaDescription: item.metaDescription || "",
-        keywords: item.keywords || "",
       });
       createdTopics.push(doc._id);
     }

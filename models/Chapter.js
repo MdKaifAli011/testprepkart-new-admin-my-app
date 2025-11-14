@@ -47,29 +47,6 @@ const chapterSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-    // content fields
-    content: {
-      type: String,
-      default: "",
-    },
-    // seo title
-    title: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    // seo description
-    metaDescription: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    // seo keywords
-    keywords: {
-      type: String,
-      trim: true,
-      default: "",
-    },
   },
   { timestamps: true }
 );
@@ -89,6 +66,13 @@ chapterSchema.pre("findOneAndDelete", async function () {
       // Get models - use mongoose.model() to ensure models are loaded
       const Topic = mongoose.models.Topic || mongoose.model("Topic");
       const SubTopic = mongoose.models.SubTopic || mongoose.model("SubTopic");
+      const ChapterDetails = mongoose.models.ChapterDetails || mongoose.model("ChapterDetails");
+
+      // Delete chapter details first
+      const chapterDetailsResult = await ChapterDetails.deleteMany({ chapterId: chapter._id });
+      console.log(
+        `🗑️ Cascading delete: Deleted ${chapterDetailsResult.deletedCount} ChapterDetails for chapter ${chapter._id}`
+      );
 
       // Find all topics in this chapter
       const topics = await Topic.find({ chapterId: chapter._id });

@@ -54,10 +54,6 @@ export async function PUT(request, { params }) {
       examId,
       orderNumber,
       status,
-      content,
-      title,
-      metaDescription,
-      keywords,
     } = body;
 
     // Validate required fields
@@ -84,13 +80,9 @@ export async function PUT(request, { params }) {
       return errorResponse("Subject with same name already exists", 409);
     }
 
-    // Prepare update data
+    // Prepare update data (content/SEO fields are now in SubjectDetails)
     const updateData = {
       name: subjectName,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     };
 
     if (examId) updateData.examId = examId;

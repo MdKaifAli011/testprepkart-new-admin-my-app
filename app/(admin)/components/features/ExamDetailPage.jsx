@@ -32,18 +32,32 @@ const ExamDetailPage = ({ examId }) => {
     isFetchingRef.current = true;
     try {
       setIsLoading(true);
-      const res = await api.get(`/exam/${examId}`);
-      if (res.data?.success) {
-        const data = res.data.data;
+      // Fetch main exam and details in parallel
+      const [examRes, detailsRes] = await Promise.all([
+        api.get(`/exam/${examId}`),
+        api.get(`/exam/${examId}/details`),
+      ]);
+      
+      if (examRes.data?.success) {
+        const data = examRes.data.data;
         setExam(data);
+        
+        // Get details or use defaults
+        const details = detailsRes.data?.success ? detailsRes.data.data : {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        };
+        
         setFormData({
           name: data.name || "",
-          content: data.content || "",
-          title: data.title || "",
-          metaDescription: data.metaDescription || "",
-          keywords: data.keywords || "",
+          content: details.content || "",
+          title: details.title || "",
+          metaDescription: details.metaDescription || "",
+          keywords: details.keywords || "",
         });
-      } else setError(res.data?.message || "Failed to fetch exam details");
+      } else setError(examRes.data?.message || "Failed to fetch exam details");
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to fetch exam details");
     } finally {
@@ -68,12 +82,24 @@ const ExamDetailPage = ({ examId }) => {
 
     try {
       setIsSaving(true);
-      const res = await api.put(`/exam/${examId}`, formData);
-      if (res.data?.success) {
+      // Save main exam and details separately
+      const [examRes, detailsRes] = await Promise.all([
+        api.put(`/exam/${examId}`, { name: formData.name }),
+        api.put(`/exam/${examId}/details`, {
+          content: formData.content,
+          title: formData.title,
+          metaDescription: formData.metaDescription,
+          keywords: formData.keywords,
+        }),
+      ]);
+      
+      if (examRes.data?.success && detailsRes.data?.success) {
         success("Exam details saved successfully!");
-        setExam(res.data.data);
+        setExam(examRes.data.data);
         setIsEditing(false);
-      } else showError(res.data?.message || "Save failed");
+      } else {
+        showError(examRes.data?.message || detailsRes.data?.message || "Save failed");
+      }
     } catch (err) {
       showError(err?.response?.data?.message || "Save failed");
     } finally {

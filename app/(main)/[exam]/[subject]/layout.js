@@ -11,11 +11,17 @@ export async function generateMetadata({ params }) {
     let subject = null;
 
     try {
-      const { fetchExamById, fetchSubjectById } = await import("../../lib/api");
+      const { fetchExamById, fetchSubjectById, fetchSubjectDetailsById } = await import("../../lib/api");
       [exam, subject] = await Promise.all([
         fetchExamById(examSlug).catch(() => null),
         fetchSubjectById(subjectSlug).catch(() => null),
       ]);
+      
+      // Fetch subject details separately
+      let subjectDetails = null;
+      if (subject?._id) {
+        subjectDetails = await fetchSubjectDetailsById(subject._id).catch(() => null);
+      }
     } catch (fetchError) {
       // Silently fail - we'll use defaults
       logger.warn("Could not fetch data for metadata:", fetchError.message);
@@ -28,23 +34,23 @@ export async function generateMetadata({ params }) {
       );
     }
 
-    // Use SEO fields from admin: title, metaDescription, keywords
+    // Use SEO fields from Details: title, metaDescription, keywords
     // If admin provided SEO data, use it; otherwise generate from names
     const seoData = {
       title:
-        subject.title ||
+        subjectDetails?.title ||
         (subject.name && exam?.name
           ? `${subject.name} - ${exam.name}`
           : subject.name || "Subject"),
       metaDescription:
-        subject.metaDescription ||
+        subjectDetails?.metaDescription ||
         (subject.name && exam?.name
           ? `Prepare for ${subject.name} in ${exam.name} exam with comprehensive study materials and practice tests.`
           : `Prepare for ${
               subject.name || "Subject"
             } with comprehensive study materials.`),
       keywords:
-        subject.keywords ||
+        subjectDetails?.keywords ||
         (subject.name && exam?.name
           ? `${subject.name}, ${exam.name}`
           : subject.name || "Subject"),

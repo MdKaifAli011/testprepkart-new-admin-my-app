@@ -42,29 +42,6 @@ const subTopicSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-    // Rich text content
-    content: {
-      type: String,
-      default: "",
-    },
-    // seo title
-    title: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    // seo description
-    metaDescription: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    // seo keywords
-    keywords: {
-      type: String,
-      trim: true,
-      default: "",
-    },
   },
   { timestamps: true }
 );
@@ -72,10 +49,27 @@ const subTopicSchema = new mongoose.Schema(
 // Add compound index to ensure unique orderNumber per topic within an exam
 subTopicSchema.index({ topicId: 1, orderNumber: 1 }, { unique: true });
 
-// Cascading delete: SubTopic is a leaf node with no children, so no cascading deletes needed
-// This middleware is here for documentation and consistency
+// Cascading delete: When a SubTopic is deleted, delete its details
 subTopicSchema.pre("findOneAndDelete", async function () {
-  // No cascading delete needed - SubTopic has no child entities
+  try {
+    const subTopic = await this.model.findOne(this.getQuery());
+    if (subTopic) {
+      console.log(
+        `🗑️ Cascading delete: Deleting details for subtopic ${subTopic._id}`
+      );
+
+      // Get model - use mongoose.model() to ensure model is loaded
+      const SubTopicDetails = mongoose.models.SubTopicDetails || mongoose.model("SubTopicDetails");
+
+      const result = await SubTopicDetails.deleteMany({ subTopicId: subTopic._id });
+      console.log(
+        `🗑️ Cascading delete: Deleted ${result.deletedCount} SubTopicDetails for subtopic ${subTopic._id}`
+      );
+    }
+  } catch (error) {
+    console.error("❌ Error in SubTopic cascading delete middleware:", error);
+    // Don't throw - allow the delete to continue even if cascading fails
+  }
 });
 
 // Ensure the latest schema is used during dev hot-reload

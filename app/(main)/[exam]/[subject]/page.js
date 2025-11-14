@@ -23,6 +23,7 @@ import {
   fetchUnitsBySubject,
   createSlug,
   findByIdOrSlug,
+  fetchSubjectDetailsById,
 } from "../../lib/api";
 import {
   getNextSubject,
@@ -127,6 +128,7 @@ const SubjectPage = () => {
   // Data states
   const [exam, setExam] = useState(null);
   const [subject, setSubject] = useState(null);
+  const [subjectDetails, setSubjectDetails] = useState(null);
   const [units, setUnits] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [currentSubjectIndex, setCurrentSubjectIndex] = useState(-1);
@@ -162,9 +164,18 @@ const SubjectPage = () => {
           return;
         }
 
-        // Fetch full subject data including content
+        // Fetch full subject data
         const fullSubjectData = await fetchSubjectById(foundSubject._id);
         setSubject(fullSubjectData || foundSubject);
+
+        // Fetch subject details separately
+        const details = await fetchSubjectDetailsById(foundSubject._id);
+        setSubjectDetails(details || {
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        });
 
         // Find current subject index for navigation
         const subjectIndex = fetchedSubjects.findIndex(
@@ -288,8 +299,8 @@ const SubjectPage = () => {
                 {
                   Overview: (
                     <div className="space-y-4">
-                      {subject?.content ? (
-                        <RichContent html={subject.content} />
+                      {subjectDetails?.content ? (
+                        <RichContent html={subjectDetails.content} />
                       ) : (
                         <>
                           <h3 className="text-xl font-bold text-gray-900 mb-2">

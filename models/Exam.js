@@ -13,28 +13,6 @@ const examSchema = new mongoose.Schema(
       enum: ["active", "inactive", "draft"],
       default: "active",
     },
-    content: {
-      type: String,
-      default: "",
-    },
-        // seo title
-        title: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo description
-        metaDescription: {
-          type: String,
-          trim: true,
-          default: "",
-        },
-        // seo keywords
-        keywords: {
-          type: String,
-          trim: true,
-          default: "",
-        },
   },
   { timestamps: true }
 );
@@ -54,6 +32,13 @@ examSchema.pre("findOneAndDelete", async function () {
       const Chapter = mongoose.models.Chapter || mongoose.model("Chapter");
       const Topic = mongoose.models.Topic || mongoose.model("Topic");
       const SubTopic = mongoose.models.SubTopic || mongoose.model("SubTopic");
+      const ExamDetails = mongoose.models.ExamDetails || mongoose.model("ExamDetails");
+
+      // Delete exam details first
+      const examDetailsResult = await ExamDetails.deleteMany({ examId: exam._id });
+      console.log(
+        `🗑️ Cascading delete: Deleted ${examDetailsResult.deletedCount} ExamDetails for exam ${exam._id}`
+      );
 
       // Since all entities have examId, we can delete them all directly by examId
       // Delete in reverse order of hierarchy to maintain referential integrity

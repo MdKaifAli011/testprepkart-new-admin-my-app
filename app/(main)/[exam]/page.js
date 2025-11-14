@@ -11,6 +11,7 @@ import {
   fetchSubjectsByExam,
   createSlug,
   fetchExams,
+  fetchExamDetailsById,
 } from "../lib/api";
 import { useDataFetching } from "../lib/hooks/useDataFetching";
 import { ERROR_MESSAGES, PLACEHOLDERS } from "@/constants";
@@ -116,6 +117,9 @@ const ExamPage = () => {
   const [exams, setExams] = useState([]);
   const [currentExamIndex, setCurrentExamIndex] = useState(-1);
 
+  // State for exam details
+  const [examDetails, setExamDetails] = useState(null);
+
   // Optimized data fetching with caching
   const {
     data: exam,
@@ -132,6 +136,26 @@ const ExamPage = () => {
     [examId],
     { cacheKey: `exam-${examId}`, enabled: !!examId }
   );
+
+  // Fetch exam details separately
+  useEffect(() => {
+    const loadExamDetails = async () => {
+      if (!exam?._id) return;
+      try {
+        const details = await fetchExamDetailsById(exam._id);
+        setExamDetails(details);
+      } catch (error) {
+        console.error("Error fetching exam details:", error);
+        setExamDetails({
+          content: "",
+          title: "",
+          metaDescription: "",
+          keywords: "",
+        });
+      }
+    };
+    loadExamDetails();
+  }, [exam?._id]);
 
   const {
     data: subjects,
@@ -261,8 +285,8 @@ const ExamPage = () => {
           <div className="p-4 sm:p-6 text-gray-600 text-sm sm:text-base">
             {activeTab === "Overview" && (
               <div className="prose prose-sm sm:prose max-w-none">
-                {exam?.content ? (
-                  <RichContent html={exam.content} />
+                {examDetails?.content ? (
+                  <RichContent html={examDetails.content} />
                 ) : (
                   <div className="text-gray-500 italic">
                     <p>No content available for this exam.</p>

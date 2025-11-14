@@ -57,7 +57,7 @@ export async function PUT(request, { params }) {
       return errorResponse("Invalid exam ID", 400);
     }
 
-    const { name, status, content, title, metaDescription, keywords, orderNumber } = body;
+    const { name, status, orderNumber } = body;
 
     // Validate required fields
     if (!name || name.trim() === "") {
@@ -82,13 +82,9 @@ export async function PUT(request, { params }) {
       return errorResponse("Exam with same name already exists", 409);
     }
 
-    // Prepare update data
+    // Prepare update data (content/SEO fields are now in ExamDetails)
     const updateData = {
       name: examName,
-      content: content || "",
-      title: title || "",
-      metaDescription: metaDescription || "",
-      keywords: keywords || "",
     };
 
     if (status) updateData.status = status;
