@@ -42,6 +42,7 @@ const PracticeSubCategoryManagement = ({ categoryId: propCategoryId }) => {
     chapterId: "",
     topicId: "",
     subTopicId: "",
+    orderNumber: "",
     duration: "",
     maximumMarks: "",
     numberOfQuestions: "",
@@ -195,6 +196,22 @@ const PracticeSubCategoryManagement = ({ categoryId: propCategoryId }) => {
     fetchSubCategories();
   }, [fetchSubCategories]);
 
+  // Calculate next order number when category is selected
+  useEffect(() => {
+    if (showAddForm && formData.categoryId && !editingSubCategory) {
+      const subCategoriesInCategory = subCategories.filter(
+        (sc) => (sc.categoryId?._id || sc.categoryId) === formData.categoryId
+      );
+      const maxOrder = subCategoriesInCategory.length > 0
+        ? Math.max(...subCategoriesInCategory.map(sc => sc.orderNumber || 0))
+        : 0;
+      setFormData(prev => ({
+        ...prev,
+        orderNumber: (maxOrder + 1).toString(),
+      }));
+    }
+  }, [formData.categoryId, showAddForm, editingSubCategory, subCategories]);
+
   // Fetch units when category is loaded or form category changes
   useEffect(() => {
     const selectedCategory = categoryId
@@ -273,6 +290,7 @@ const PracticeSubCategoryManagement = ({ categoryId: propCategoryId }) => {
       chapterId: "",
       topicId: "",
       subTopicId: "",
+      orderNumber: "",
       duration: "",
       maximumMarks: "",
       numberOfQuestions: "",
@@ -324,6 +342,11 @@ const PracticeSubCategoryManagement = ({ categoryId: propCategoryId }) => {
         negativeMarks: parseFloat(formData.negativeMarks) || 0,
         description: formData.description.trim() || "",
       };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
+      }
 
       let response;
       if (editingSubCategory) {
@@ -379,6 +402,7 @@ const PracticeSubCategoryManagement = ({ categoryId: propCategoryId }) => {
       chapterId: subCategory.chapterId?._id || subCategory.chapterId || "",
       topicId: subCategory.topicId?._id || subCategory.topicId || "",
       subTopicId: subCategory.subTopicId?._id || subCategory.subTopicId || "",
+      orderNumber: subCategory.orderNumber?.toString() || "",
       duration: subCategory.duration || "",
       maximumMarks: subCategory.maximumMarks || "",
       numberOfQuestions: subCategory.numberOfQuestions || "",
@@ -696,25 +720,47 @@ const PracticeSubCategoryManagement = ({ categoryId: propCategoryId }) => {
                 </div>
               </div>
 
-              {/* Row 2: Paper Name */}
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Paper Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleFormChange}
-                  placeholder="Enter paper name (e.g., 2025 Simple Paper)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
-                  required
-                  disabled={isFormLoading}
-                />
+              {/* Row 2: Paper Name & Order Number */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Paper Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleFormChange}
+                    placeholder="Enter paper name (e.g., 2025 Simple Paper)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
+                    required
+                    disabled={isFormLoading}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="orderNumber"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Order Number
+                  </label>
+                  <input
+                    type="number"
+                    id="orderNumber"
+                    name="orderNumber"
+                    value={formData.orderNumber}
+                    onChange={handleFormChange}
+                    placeholder="Auto-calculated"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
+                    disabled={isFormLoading}
+                  />
+                </div>
               </div>
 
               {/* Row 3: Duration, Maximum Marks, Number of Questions, Negative Marks */}

@@ -236,9 +236,10 @@ const ChaptersManagement = () => {
 
   // Get next order number for chapters in a unit
   const getNextOrderNumber = useCallback(async (unitId) => {
+    if (!unitId) return 1;
     try {
-      const response = await api.get(`/chapter?unitId=${unitId}`);
-      if (response.data.success && response.data.data) {
+      const response = await api.get(`/chapter?unitId=${unitId}&status=all&limit=1000`);
+      if (response.data.success && response.data.data && response.data.data.length > 0) {
         const maxOrder = Math.max(
           ...response.data.data.map((chapter) => chapter.orderNumber || 0),
           0
@@ -254,34 +255,65 @@ const ChaptersManagement = () => {
 
   // Effect to get next order number when unit is selected
   useEffect(() => {
-    if (formData.unitId && showAddForm && additionalChapters.length === 0) {
+    if (formData.unitId && showAddForm) {
       getNextOrderNumber(formData.unitId).then((nextOrder) => {
         setNextOrderNumber(nextOrder);
-        setAdditionalChapters([
-          {
-            id: Date.now(),
-            name: "",
-            orderNumber: nextOrder,
-            weightage: 0,
-            time: 0,
-            questions: 0,
-          },
-        ]);
+        
+        // Always update chapters - create first one if none exist, or update existing ones
+        setAdditionalChapters((prev) => {
+          if (prev.length === 0) {
+            // Create first chapter with calculated order number
+            return [
+              {
+                id: Date.now(),
+                name: "",
+                orderNumber: nextOrder,
+                weightage: 0,
+                time: 0,
+                questions: 0,
+              },
+            ];
+          } else {
+            // Update order numbers for existing chapters
+            return prev.map((chapter, index) => ({
+              ...chapter,
+              orderNumber: nextOrder + index,
+            }));
+          }
+        });
       });
+    } else if (!formData.unitId && showAddForm) {
+      // Clear chapters when unit is cleared
+      setAdditionalChapters([]);
+      setNextOrderNumber(1);
     }
   }, [
     formData.unitId,
     showAddForm,
-    additionalChapters.length,
     getNextOrderNumber,
   ]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset subject when exam changes
+      if (name === "examId" && value !== prev.examId) {
+        newData.subjectId = "";
+        newData.unitId = "";
+      }
+      
+      // Reset unit when subject changes
+      if (name === "subjectId" && value !== prev.subjectId) {
+        newData.unitId = "";
+      }
+      
+      // Note: Chapter clearing and order number calculation is handled by useEffect
+      // when unitId changes
+      
+      return newData;
+    });
     setFormError(null);
   };
 
@@ -458,7 +490,7 @@ const ChaptersManagement = () => {
       examId: chapterToEdit.examId._id || chapterToEdit.examId,
       subjectId: chapterToEdit.subjectId._id || chapterToEdit.subjectId,
       unitId: chapterToEdit.unitId._id || chapterToEdit.unitId,
-      orderNumber: chapterToEdit.orderNumber || "",
+      orderNumber: chapterToEdit.orderNumber?.toString() || "",
       weightage: chapterToEdit.weightage || 0,
       time: chapterToEdit.time || 0,
       questions: chapterToEdit.questions || 0,
@@ -514,7 +546,7 @@ const ChaptersManagement = () => {
         examId: editFormData.examId,
         subjectId: editFormData.subjectId,
         unitId: editFormData.unitId,
-        orderNumber: editFormData.orderNumber
+        orderNumber: editFormData.orderNumber && editFormData.orderNumber.trim()
           ? parseInt(editFormData.orderNumber)
           : undefined,
         weightage: editFormData.weightage

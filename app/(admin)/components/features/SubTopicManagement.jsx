@@ -408,7 +408,40 @@ const SubTopicsManagement = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset subject when exam changes
+      if (name === "examId" && value !== prev.examId) {
+        newData.subjectId = "";
+        newData.unitId = "";
+        newData.chapterId = "";
+        newData.topicId = "";
+      }
+      
+      // Reset unit when subject changes
+      if (name === "subjectId" && value !== prev.subjectId) {
+        newData.unitId = "";
+        newData.chapterId = "";
+        newData.topicId = "";
+      }
+      
+      // Reset chapter when unit changes
+      if (name === "unitId" && value !== prev.unitId) {
+        newData.chapterId = "";
+        newData.topicId = "";
+      }
+      
+      // Reset topic when chapter changes
+      if (name === "chapterId" && value !== prev.chapterId) {
+        newData.topicId = "";
+      }
+      
+      // Note: SubTopic clearing and order number calculation is handled by useEffect
+      // when topicId changes
+      
+      return newData;
+    });
     setFormError(null);
   };
 
@@ -430,6 +463,7 @@ const SubTopicsManagement = () => {
       orderNumber: "",
     });
     setAdditionalSubTopics([{ name: "", orderNumber: "" }]);
+    setNextOrderNumber(1);
     setFormError(null);
   };
 
@@ -460,16 +494,30 @@ const SubTopicsManagement = () => {
       orderNumber: "",
     });
     setAdditionalSubTopics([{ name: "", orderNumber: "" }]);
+    setNextOrderNumber(1);
     setFormError(null);
   };
 
   const handleAddMoreSubTopics = () => {
-    setAdditionalSubTopics((prev) => [...prev, { name: "", orderNumber: "" }]);
+    setAdditionalSubTopics((prev) => {
+      const nextOrder = nextOrderNumber + prev.length;
+      return [...prev, { name: "", orderNumber: nextOrder.toString() }];
+    });
   };
 
   const handleRemoveSubTopic = (index) => {
     if (additionalSubTopics.length > 1) {
-      setAdditionalSubTopics((prev) => prev.filter((_, i) => i !== index));
+      setAdditionalSubTopics((prev) => {
+        const filtered = prev.filter((_, i) => i !== index);
+        // Recalculate order numbers after removal
+        if (nextOrderNumber > 0) {
+          return filtered.map((subTopic, i) => ({
+            ...subTopic,
+            orderNumber: (nextOrderNumber + i).toString(),
+          }));
+        }
+        return filtered;
+      });
     }
   };
 
@@ -481,10 +529,11 @@ const SubTopicsManagement = () => {
     );
   };
 
-  const getNextOrderNumber = async (topicId) => {
+  const getNextOrderNumber = useCallback(async (topicId) => {
+    if (!topicId) return 1;
     try {
-      const response = await api.get(`/subtopic?topicId=${topicId}`);
-      if (response.data.success) {
+      const response = await api.get(`/subtopic?topicId=${topicId}&status=all&limit=1000`);
+      if (response.data.success && response.data.data && response.data.data.length > 0) {
         const existingSubTopics = response.data.data;
         const maxOrder = existingSubTopics.reduce(
           (max, subTopic) => Math.max(max, subTopic.orderNumber || 0),
@@ -496,26 +545,43 @@ const SubTopicsManagement = () => {
       console.error("Error fetching next order number:", error);
     }
     return 1;
-  };
+  }, []);
 
   // Update order numbers when topic is selected
   useEffect(() => {
-    if (formData.topicId) {
+    if (formData.topicId && showAddForm) {
       getNextOrderNumber(formData.topicId).then((orderNumber) => {
         setNextOrderNumber(orderNumber);
         setFormData((prev) => ({
           ...prev,
           orderNumber: orderNumber.toString(),
         }));
-        setAdditionalSubTopics((prev) =>
-          prev.map((subTopic, index) => ({
-            ...subTopic,
-            orderNumber: (orderNumber + index).toString(),
-          }))
-        );
+        
+        // Always update sub topics - create first one if none exist, or update existing ones
+        setAdditionalSubTopics((prev) => {
+          if (prev.length === 0 || prev.some(st => !st.orderNumber || st.orderNumber === "")) {
+            // Create first sub topic with calculated order number
+            return [
+              {
+                name: "",
+                orderNumber: orderNumber.toString(),
+              },
+            ];
+          } else {
+            // Update order numbers for existing sub topics
+            return prev.map((subTopic, index) => ({
+              ...subTopic,
+              orderNumber: (orderNumber + index).toString(),
+            }));
+          }
+        });
       });
+    } else if (!formData.topicId && showAddForm) {
+      // Clear sub topics when topic is cleared
+      setAdditionalSubTopics([{ name: "", orderNumber: "" }]);
+      setNextOrderNumber(1);
     }
-  }, [formData.topicId]);
+  }, [formData.topicId, showAddForm, getNextOrderNumber]);
 
   const handleAddSubTopics = async (e) => {
     e.preventDefault();
@@ -584,7 +650,7 @@ const SubTopicsManagement = () => {
       unitId: subTopicToEdit.unitId._id || subTopicToEdit.unitId,
       chapterId: subTopicToEdit.chapterId._id || subTopicToEdit.chapterId,
       topicId: subTopicToEdit.topicId._id || subTopicToEdit.topicId,
-      orderNumber: subTopicToEdit.orderNumber,
+      orderNumber: subTopicToEdit.orderNumber?.toString() || "",
     });
     setShowEditForm(true);
   };
@@ -602,7 +668,9 @@ const SubTopicsManagement = () => {
         unitId: editFormData.unitId,
         chapterId: editFormData.chapterId,
         topicId: editFormData.topicId,
-        orderNumber: parseInt(editFormData.orderNumber),
+        orderNumber: editFormData.orderNumber && editFormData.orderNumber.trim()
+          ? parseInt(editFormData.orderNumber)
+          : undefined,
       });
 
       if (response.data.success) {

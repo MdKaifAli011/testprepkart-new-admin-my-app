@@ -312,7 +312,32 @@ const TopicManagement = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset subject when exam changes
+      if (name === "examId" && value !== prev.examId) {
+        newData.subjectId = "";
+        newData.unitId = "";
+        newData.chapterId = "";
+      }
+      
+      // Reset unit when subject changes
+      if (name === "subjectId" && value !== prev.subjectId) {
+        newData.unitId = "";
+        newData.chapterId = "";
+      }
+      
+      // Reset chapter when unit changes
+      if (name === "unitId" && value !== prev.unitId) {
+        newData.chapterId = "";
+      }
+      
+      // Note: Topic clearing and order number calculation is handled by useEffect
+      // when chapterId changes
+      
+      return newData;
+    });
     setFormError(null);
   };
 
@@ -365,7 +390,10 @@ const TopicManagement = () => {
   };
 
   const handleAddMoreTopics = () => {
-    setAdditionalTopics((prev) => [...prev, { name: "", orderNumber: "" }]);
+    setAdditionalTopics((prev) => {
+      const nextOrder = nextOrderNumber + prev.length;
+      return [...prev, { name: "", orderNumber: nextOrder.toString() }];
+    });
   };
 
   const handleRemoveTopic = (index) => {
@@ -382,10 +410,11 @@ const TopicManagement = () => {
     );
   };
 
-  const getNextOrderNumber = async (chapterId) => {
+  const getNextOrderNumber = useCallback(async (chapterId) => {
+    if (!chapterId) return 1;
     try {
-      const response = await api.get(`/topic?chapterId=${chapterId}`);
-      if (response.data.success) {
+      const response = await api.get(`/topic?chapterId=${chapterId}&status=all&limit=1000`);
+      if (response.data.success && response.data.data && response.data.data.length > 0) {
         const existingTopics = response.data.data;
         const maxOrder = existingTopics.reduce(
           (max, topic) => Math.max(max, topic.orderNumber || 0),
@@ -397,26 +426,43 @@ const TopicManagement = () => {
       console.error("Error fetching next order number:", error);
     }
     return 1;
-  };
+  }, []);
 
   // Update order numbers when chapter is selected
   useEffect(() => {
-    if (formData.chapterId) {
+    if (formData.chapterId && showAddForm) {
       getNextOrderNumber(formData.chapterId).then((orderNumber) => {
         setNextOrderNumber(orderNumber);
         setFormData((prev) => ({
           ...prev,
           orderNumber: orderNumber.toString(),
         }));
-        setAdditionalTopics((prev) =>
-          prev.map((topic, index) => ({
-            ...topic,
-            orderNumber: (orderNumber + index).toString(),
-          }))
-        );
+        
+        // Always update topics - create first one if none exist, or update existing ones
+        setAdditionalTopics((prev) => {
+          if (prev.length === 0 || prev.some(t => !t.orderNumber || t.orderNumber === "")) {
+            // Create first topic with calculated order number
+            return [
+              {
+                name: "",
+                orderNumber: orderNumber.toString(),
+              },
+            ];
+          } else {
+            // Update order numbers for existing topics
+            return prev.map((topic, index) => ({
+              ...topic,
+              orderNumber: (orderNumber + index).toString(),
+            }));
+          }
+        });
       });
+    } else if (!formData.chapterId && showAddForm) {
+      // Clear topics when chapter is cleared
+      setAdditionalTopics([{ name: "", orderNumber: "" }]);
+      setNextOrderNumber(1);
     }
-  }, [formData.chapterId]);
+  }, [formData.chapterId, showAddForm, getNextOrderNumber]);
 
   const handleAddTopics = async (e) => {
     e.preventDefault();
@@ -480,7 +526,7 @@ const TopicManagement = () => {
       subjectId: topicToEdit.subjectId._id || topicToEdit.subjectId,
       unitId: topicToEdit.unitId._id || topicToEdit.unitId,
       chapterId: topicToEdit.chapterId._id || topicToEdit.chapterId,
-      orderNumber: topicToEdit.orderNumber,
+      orderNumber: topicToEdit.orderNumber?.toString() || "",
     });
     setShowEditForm(true);
   };
@@ -497,7 +543,9 @@ const TopicManagement = () => {
         subjectId: editFormData.subjectId,
         unitId: editFormData.unitId,
         chapterId: editFormData.chapterId,
-        orderNumber: parseInt(editFormData.orderNumber),
+        orderNumber: editFormData.orderNumber && editFormData.orderNumber.trim()
+          ? parseInt(editFormData.orderNumber)
+          : undefined,
       });
 
       if (response.data.success) {

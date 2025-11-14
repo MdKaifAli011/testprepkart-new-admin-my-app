@@ -347,7 +347,7 @@ const UnitsManagement = () => {
       name: unitToEdit.name,
       examId: unitToEdit.examId._id || unitToEdit.examId,
       subjectId: unitToEdit.subjectId._id || unitToEdit.subjectId,
-      orderNumber: unitToEdit.orderNumber,
+      orderNumber: unitToEdit.orderNumber?.toString() || "",
     });
     setShowEditForm(true);
     setFormError(null);
@@ -380,8 +380,7 @@ const UnitsManagement = () => {
     if (
       !editFormData.name ||
       !editFormData.examId ||
-      !editFormData.subjectId ||
-      !editFormData.orderNumber
+      !editFormData.subjectId
     ) {
       setFormError("Please fill in all required fields");
       return;
@@ -395,7 +394,9 @@ const UnitsManagement = () => {
         name: editFormData.name.trim(),
         examId: editFormData.examId,
         subjectId: editFormData.subjectId,
-        orderNumber: parseInt(editFormData.orderNumber),
+        orderNumber: editFormData.orderNumber && editFormData.orderNumber.trim()
+          ? parseInt(editFormData.orderNumber)
+          : undefined,
       });
 
       if (response.data.success) {

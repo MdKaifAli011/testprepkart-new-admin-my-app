@@ -36,6 +36,7 @@ const PracticeQuestionManagement = ({ subCategoryId }) => {
     optionC: "",
     optionD: "",
     answer: "",
+    orderNumber: "",
     videoLink: "",
     detailsExplanation: "",
   });
@@ -114,6 +115,19 @@ const PracticeQuestionManagement = ({ subCategoryId }) => {
     fetchQuestions();
   }, [fetchQuestions]);
 
+  // Calculate next order number when form opens
+  useEffect(() => {
+    if (showAddForm && subCategoryId && !editingQuestion) {
+      const maxOrder = questions.length > 0
+        ? Math.max(...questions.map(q => q.orderNumber || 0))
+        : 0;
+      setFormData(prev => ({
+        ...prev,
+        orderNumber: (maxOrder + 1).toString(),
+      }));
+    }
+  }, [showAddForm, subCategoryId, editingQuestion, questions]);
+
   // ✅ Handle Form Change
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -133,6 +147,7 @@ const PracticeQuestionManagement = ({ subCategoryId }) => {
       optionC: "",
       optionD: "",
       answer: "",
+      orderNumber: "",
       videoLink: "",
       detailsExplanation: "",
     });
@@ -155,6 +170,7 @@ const PracticeQuestionManagement = ({ subCategoryId }) => {
       optionC: question.optionC || "",
       optionD: question.optionD || "",
       answer: question.answer || "",
+      orderNumber: question.orderNumber?.toString() || "",
       videoLink: question.videoLink || "",
       detailsExplanation: question.detailsExplanation || "",
     });
@@ -240,6 +256,11 @@ const PracticeQuestionManagement = ({ subCategoryId }) => {
         videoLink: formData.videoLink?.trim() || "",
         detailsExplanation: formData.detailsExplanation?.trim() || "",
       };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
+      }
 
       let response;
       if (editingQuestion) {
@@ -487,28 +508,49 @@ const PracticeQuestionManagement = ({ subCategoryId }) => {
                 </div>
               </div>
 
-              {/* Answer Selection */}
-              <div>
-                <label
-                  htmlFor="answer"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Correct Answer <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="answer"
-                  name="answer"
-                  value={formData.answer}
-                  onChange={handleFormChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  <option value="">Select correct answer</option>
-                  <option value="A">Option A</option>
-                  <option value="B">Option B</option>
-                  <option value="C">Option C</option>
-                  <option value="D">Option D</option>
-                </select>
+              {/* Answer Selection & Order Number */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="answer"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Correct Answer <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="answer"
+                    name="answer"
+                    value={formData.answer}
+                    onChange={handleFormChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    <option value="">Select correct answer</option>
+                    <option value="A">Option A</option>
+                    <option value="B">Option B</option>
+                    <option value="C">Option C</option>
+                    <option value="D">Option D</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="orderNumber"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Order Number
+                  </label>
+                  <input
+                    type="number"
+                    id="orderNumber"
+                    name="orderNumber"
+                    value={formData.orderNumber}
+                    onChange={handleFormChange}
+                    placeholder="Auto-calculated"
+                    min="1"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  />
+                </div>
               </div>
 
               {/* Video Link */}

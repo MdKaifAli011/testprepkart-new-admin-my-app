@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import PracticeSubCategory from "@/models/PracticeSubCategory";
 import PracticeCategory from "@/models/PracticeCategory";
+import Topic from "@/models/Topic";
+import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
 import {
   successResponse,

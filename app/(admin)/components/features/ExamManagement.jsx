@@ -25,9 +25,11 @@ const ExamManagement = () => {
   const [isFormLoading, setIsFormLoading] = useState(false);
   const [exams, setExams] = useState([]);
   const [error, setError] = useState(null);
+  const [editingExam, setEditingExam] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     status: "active",
+    orderNumber: "",
   });
   const [formError, setFormError] = useState(null);
   const { toasts, removeToast, success, error: showError } = useToast();
@@ -65,6 +67,19 @@ const ExamManagement = () => {
     fetchExams();
   }, []);
 
+  // Calculate next order number when form opens
+  useEffect(() => {
+    if (showAddForm && !editingExam) {
+      const maxOrder = exams.length > 0 
+        ? Math.max(...exams.map(exam => exam.orderNumber || 0))
+        : 0;
+      setFormData(prev => ({
+        ...prev,
+        orderNumber: (maxOrder + 1).toString(),
+      }));
+    }
+  }, [showAddForm, editingExam, exams]);
+
   const handleAddExam = async (e) => {
     e.preventDefault();
 
@@ -83,10 +98,17 @@ const ExamManagement = () => {
       setIsFormLoading(true);
       setFormError(null);
 
-      const response = await api.post("/exam", {
+      const payload = {
         name: formData.name.trim(),
         status: formData.status,
-      });
+      };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
+      }
+
+      const response = await api.post("/exam", payload);
 
       if (response.data.success) {
         // Add the new exam to the list
@@ -96,7 +118,9 @@ const ExamManagement = () => {
         setFormData({
           name: "",
           status: "active",
+          orderNumber: "",
         });
+        setEditingExam(null);
         setShowAddForm(false);
       } else {
         setFormError(response.data.message || "Failed to add exam");
@@ -127,47 +151,79 @@ const ExamManagement = () => {
     setFormData({
       name: "",
       status: "active",
+      orderNumber: "",
     });
     setFormError(null);
+    setEditingExam(null);
     setShowAddForm(false);
   };
 
-  const handleEditExam = async (exam) => {
+  const handleEditExam = (exam) => {
     // Check permissions
     if (!canEdit) {
       showError(getPermissionMessage("edit", role));
       return;
     }
-    const newName = prompt("Enter new exam name:", exam.name);
-    if (newName && newName.trim() !== exam.name) {
-      try {
-        setIsFormLoading(true);
-        setError(null);
+    setEditingExam(exam);
+    setFormData({
+      name: exam.name || "",
+      status: exam.status || "active",
+      orderNumber: exam.orderNumber?.toString() || "",
+    });
+    setShowAddForm(true);
+    setFormError(null);
+  };
 
-        const response = await api.put(`/exam/${exam._id}`, {
-          name: newName.trim(),
-        });
+  const handleUpdateExam = async (e) => {
+    e.preventDefault();
 
-        if (response.data.success) {
-          // Update the exam in the list
-          setExams((prevExams) =>
-            prevExams.map((e) => (e._id === exam._id ? response.data.data : e))
-          );
-          success("Exam updated successfully!");
-        } else {
-          setError(response.data.message || "Failed to update exam");
-          showError(response.data.message || "Failed to update exam");
-        }
-      } catch (error) {
-        console.error("Error updating exam:", error);
-        const errorMessage =
-          error.response?.data?.message ||
-          "Failed to update exam. Please try again.";
-        setError(errorMessage);
-        showError(errorMessage);
-      } finally {
-        setIsFormLoading(false);
+    // Check permissions
+    if (!canEdit) {
+      showError(getPermissionMessage("edit", role));
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      setFormError("Please enter an exam name");
+      return;
+    }
+
+    try {
+      setIsFormLoading(true);
+      setFormError(null);
+
+      const payload = {
+        name: formData.name.trim(),
+        status: formData.status,
+      };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
       }
+
+      const response = await api.put(`/exam/${editingExam._id}`, payload);
+
+      if (response.data.success) {
+        // Update the exam in the list
+        setExams((prevExams) =>
+          prevExams.map((e) => (e._id === editingExam._id ? response.data.data : e))
+        );
+        success("Exam updated successfully!");
+        handleCancelForm();
+      } else {
+        setFormError(response.data.message || "Failed to update exam");
+        showError(response.data.message || "Failed to update exam");
+      }
+    } catch (error) {
+      console.error("Error updating exam:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to update exam. Please try again.";
+      setFormError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setIsFormLoading(false);
     }
   };
 
@@ -283,12 +339,12 @@ const ExamManagement = () => {
           </div>
         </div>
 
-        {/* Add Exam Form */}
+        {/* Add/Edit Exam Form */}
         {showAddForm && (
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
-                Add New Exam
+                {editingExam ? "Edit Exam" : "Add New Exam"}
               </h2>
               <button
                 onClick={handleCancelForm}
@@ -299,7 +355,7 @@ const ExamManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddExam} className="space-y-4">
+            <form onSubmit={editingExam ? handleUpdateExam : handleAddExam} className="space-y-4">
               {/* Form Error Display */}
               {formError && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -312,7 +368,7 @@ const ExamManagement = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Exam Name */}
                 <div className="space-y-2">
                   <label
@@ -330,6 +386,27 @@ const ExamManagement = () => {
                     placeholder="Enter exam name (e.g., JEE Main 2024)"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
                     required
+                    disabled={isFormLoading}
+                  />
+                </div>
+
+                {/* Order Number */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="orderNumber"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Order Number
+                  </label>
+                  <input
+                    type="number"
+                    id="orderNumber"
+                    name="orderNumber"
+                    value={formData.orderNumber}
+                    onChange={handleFormChange}
+                    placeholder="Auto-calculated"
+                    min="1"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
                     disabled={isFormLoading}
                   />
                 </div>
@@ -375,12 +452,12 @@ const ExamManagement = () => {
                   {isFormLoading ? (
                     <>
                       <LoadingSpinner size="small" />
-                      <span>Adding Exam...</span>
+                      <span>{editingExam ? "Updating..." : "Adding Exam..."}</span>
                     </>
                   ) : (
                     <>
                       <FaSave className="w-4 h-4" />
-                      <span>Add Exam</span>
+                      <span>{editingExam ? "Update Exam" : "Add Exam"}</span>
                     </>
                   )}
                 </button>

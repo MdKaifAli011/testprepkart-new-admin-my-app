@@ -34,6 +34,7 @@ const PracticeManagement = () => {
     name: "",
     examId: "",
     subjectId: "",
+    orderNumber: "",
     noOfTests: "",
     mode: "Online Test",
     duration: "",
@@ -103,6 +104,22 @@ const PracticeManagement = () => {
     fetchCategories();
   }, []);
 
+  // Calculate next order number when exam is selected
+  useEffect(() => {
+    if (showAddForm && formData.examId && !editingCategory) {
+      const categoriesInExam = categories.filter(
+        (c) => (c.examId?._id || c.examId) === formData.examId
+      );
+      const maxOrder = categoriesInExam.length > 0
+        ? Math.max(...categoriesInExam.map(c => c.orderNumber || 0))
+        : 0;
+      setFormData(prev => ({
+        ...prev,
+        orderNumber: (maxOrder + 1).toString(),
+      }));
+    }
+  }, [formData.examId, showAddForm, editingCategory, categories]);
+
   // Handle form field changes
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -124,6 +141,7 @@ const PracticeManagement = () => {
       name: "",
       examId: "",
       subjectId: "",
+      orderNumber: "",
       noOfTests: "",
       mode: "Online Test",
       duration: "",
@@ -167,6 +185,11 @@ const PracticeManagement = () => {
         duration: formData.duration.trim() || "",
         language: formData.language.trim() || "English",
       };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
+      }
 
       let response;
       if (editingCategory) {
@@ -218,6 +241,7 @@ const PracticeManagement = () => {
       name: category.name || "",
       examId: examId,
       subjectId: category.subjectId?._id || category.subjectId || "",
+      orderNumber: category.orderNumber?.toString() || "",
       noOfTests: category.noOfTests || "",
       mode: category.mode || "Online Test",
       duration: category.duration || "",
@@ -378,7 +402,7 @@ const PracticeManagement = () => {
               )}
 
               {/* Row 1: Exam, Subject & Category Name */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label
                     htmlFor="examId"
@@ -393,7 +417,7 @@ const PracticeManagement = () => {
                     onChange={handleFormChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
                     required
-                    disabled={isFormLoading}
+                    disabled={isFormLoading || editingCategory}
                   >
                     <option value="">Select an exam</option>
                     {exams.map((exam) => (
@@ -427,7 +451,10 @@ const PracticeManagement = () => {
                     ))}
                   </select>
                 </div>
+              </div>
 
+              {/* Row 1.5: Category Name & Order Number */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label
                     htmlFor="name"
@@ -444,6 +471,26 @@ const PracticeManagement = () => {
                     placeholder="Enter category name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
                     required
+                    disabled={isFormLoading}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="orderNumber"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Order Number
+                  </label>
+                  <input
+                    type="number"
+                    id="orderNumber"
+                    name="orderNumber"
+                    value={formData.orderNumber}
+                    onChange={handleFormChange}
+                    placeholder="Auto-calculated"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
                     disabled={isFormLoading}
                   />
                 </div>

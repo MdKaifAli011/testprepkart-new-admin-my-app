@@ -30,6 +30,7 @@ const SubjectManagement = () => {
   const [formData, setFormData] = useState({
     name: "",
     examId: "",
+    orderNumber: "",
   });
   const [formError, setFormError] = useState(null);
   const [editingSubject, setEditingSubject] = useState(null);
@@ -87,6 +88,22 @@ const SubjectManagement = () => {
     fetchExams();
   }, []);
 
+  // Calculate next order number when exam is selected
+  useEffect(() => {
+    if (showAddForm && formData.examId && !editingSubject) {
+      const subjectsInExam = subjects.filter(
+        (s) => (s.examId?._id || s.examId) === formData.examId
+      );
+      const maxOrder = subjectsInExam.length > 0
+        ? Math.max(...subjectsInExam.map(s => s.orderNumber || 0))
+        : 0;
+      setFormData(prev => ({
+        ...prev,
+        orderNumber: (maxOrder + 1).toString(),
+      }));
+    }
+  }, [formData.examId, showAddForm, editingSubject, subjects]);
+
   // Filter subjects based on selected exam
   const filteredSubjects = useMemo(() => {
     if (!filterExam) return subjects;
@@ -132,14 +149,25 @@ const SubjectManagement = () => {
     try {
       setIsFormLoading(true);
       setFormError(null);
-      const response = await api.post("/subject", formData);
+      const payload = {
+        name: formData.name.trim(),
+        examId: formData.examId,
+      };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
+      }
+
+      const response = await api.post("/subject", payload);
 
       if (response.data?.success) {
         // Add the new subject with populated exam data
         setSubjects((prev) => [...prev, response.data.data]);
         success(`Subject "${formData.name}" added successfully!`);
         // Reset form
-        setFormData({ name: "", examId: "" });
+        setFormData({ name: "", examId: "", orderNumber: "" });
+        setEditingSubject(null);
         setShowAddForm(false);
       } else {
         setFormError(response.data?.message || "Failed to add subject");
@@ -157,52 +185,82 @@ const SubjectManagement = () => {
   };
 
   const handleCancelForm = () => {
-    setFormData({ name: "", examId: "" });
+    setFormData({ name: "", examId: "", orderNumber: "" });
     setFormError(null);
+    setEditingSubject(null);
     setShowAddForm(false);
   };
 
   // ✅ Handle Edit Subject
-  const handleEditSubject = async (subjectToEdit) => {
+  const handleEditSubject = (subjectToEdit) => {
+    // Check permissions
+    if (!canEdit) {
+      showError(getPermissionMessage("edit", role));
+      return;
+    }
+    setEditingSubject(subjectToEdit);
+    setFormData({
+      name: subjectToEdit.name || "",
+      examId: subjectToEdit.examId?._id || subjectToEdit.examId || "",
+      orderNumber: subjectToEdit.orderNumber?.toString() || "",
+    });
+    setShowAddForm(true);
+    setFormError(null);
+  };
+
+  // ✅ Handle Update Subject
+  const handleUpdateSubject = async (e) => {
+    e.preventDefault();
+
     // Check permissions
     if (!canEdit) {
       showError(getPermissionMessage("edit", role));
       return;
     }
 
-    const newName = prompt("Enter new subject name:", subjectToEdit.name);
-    if (newName && newName.trim() !== subjectToEdit.name) {
-      try {
-        setIsFormLoading(true);
-        setError(null);
+    if (!formData.name.trim() || !formData.examId) {
+      setFormError("Please fill in all required fields.");
+      return;
+    }
 
-        const response = await api.put(`/subject/${subjectToEdit._id}`, {
-          name: newName.trim(),
-          examId: subjectToEdit.examId._id || subjectToEdit.examId,
-        });
+    try {
+      setIsFormLoading(true);
+      setFormError(null);
 
-        if (response.data?.success) {
-          setSubjects((prev) =>
-            prev.map((s) =>
-              s._id === subjectToEdit._id ? response.data.data : s
-            )
-          );
-          success("Subject updated successfully!");
-        } else {
-          setError(response.data?.message || "Failed to update subject");
-          showError(response.data?.message || "Failed to update subject");
-        }
-      } catch (err) {
-        console.error("❌ Error updating subject:", err);
-        const errorMessage =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Failed to update subject";
-        setError(errorMessage);
-        showError(errorMessage);
-      } finally {
-        setIsFormLoading(false);
+      const payload = {
+        name: formData.name.trim(),
+        examId: formData.examId,
+      };
+      
+      // Add orderNumber if provided
+      if (formData.orderNumber && formData.orderNumber.trim()) {
+        payload.orderNumber = parseInt(formData.orderNumber);
       }
+
+      const response = await api.put(`/subject/${editingSubject._id}`, payload);
+
+      if (response.data?.success) {
+        setSubjects((prev) =>
+          prev.map((s) =>
+            s._id === editingSubject._id ? response.data.data : s
+          )
+        );
+        success("Subject updated successfully!");
+        handleCancelForm();
+      } else {
+        setFormError(response.data?.message || "Failed to update subject");
+        showError(response.data?.message || "Failed to update subject");
+      }
+    } catch (err) {
+      console.error("❌ Error updating subject:", err);
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to update subject";
+      setFormError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setIsFormLoading(false);
     }
   };
 
@@ -325,12 +383,12 @@ const SubjectManagement = () => {
           </div>
         </div>
 
-        {/* Add Subject Form */}
+        {/* Add/Edit Subject Form */}
         {showAddForm && (
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
-                Add New Subject
+                {editingSubject ? "Edit Subject" : "Add New Subject"}
               </h2>
               <button
                 onClick={handleCancelForm}
@@ -341,7 +399,7 @@ const SubjectManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubject} className="space-y-4">
+            <form onSubmit={editingSubject ? handleUpdateSubject : handleAddSubject} className="space-y-4">
               {/* Form Error Display */}
               {formError && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -354,7 +412,7 @@ const SubjectManagement = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Subject Name */}
                 <div className="space-y-2">
                   <label
@@ -391,7 +449,7 @@ const SubjectManagement = () => {
                     onChange={handleFormChange}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
                     required
-                    disabled={isFormLoading}
+                    disabled={isFormLoading || editingSubject}
                   >
                     <option value="">Select an exam</option>
                     {exams.map((exam) => (
@@ -400,6 +458,27 @@ const SubjectManagement = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* Order Number */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="orderNumber"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Order Number
+                  </label>
+                  <input
+                    type="number"
+                    id="orderNumber"
+                    name="orderNumber"
+                    value={formData.orderNumber}
+                    onChange={handleFormChange}
+                    placeholder="Auto-calculated"
+                    min="1"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 transition-all"
+                    disabled={isFormLoading}
+                  />
                 </div>
               </div>
 
@@ -421,12 +500,12 @@ const SubjectManagement = () => {
                   {isFormLoading ? (
                     <>
                       <LoadingSpinner size="small" />
-                      <span>Adding Subject...</span>
+                      <span>{editingSubject ? "Updating..." : "Adding Subject..."}</span>
                     </>
                   ) : (
                     <>
                       <FaSave className="w-4 h-4" />
-                      <span>Add Subject</span>
+                      <span>{editingSubject ? "Update Subject" : "Add Subject"}</span>
                     </>
                   )}
                 </button>
