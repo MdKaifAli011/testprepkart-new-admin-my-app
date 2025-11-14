@@ -169,16 +169,8 @@ export const fetchSubjectsByExam = async (examId, options = {}) => {
     }
     
     const url = `/subject?examId=${examId}&page=${page}&limit=${limit}&status=${STATUS.ACTIVE}`;
-    logger.info("fetchSubjectsByExam: Fetching from URL:", url);
     
     const response = await api.get(url);
-
-    logger.info("fetchSubjectsByExam: Response received:", {
-      success: response.data?.success,
-      hasPagination: !!response.data?.pagination,
-      dataLength: response.data?.data?.length,
-      examId,
-    });
 
     if (response.data?.success) {
       const subjects = response.data.data || [];
@@ -195,12 +187,6 @@ export const fetchSubjectsByExam = async (examId, options = {}) => {
             ? subject.status.toLowerCase() === STATUS.ACTIVE.toLowerCase()
             : false;
           return matchesExam && matchesStatus;
-        });
-        
-        logger.info("fetchSubjectsByExam: Filtered subjects:", {
-          originalCount: subjects.length,
-          filteredCount: validSubjects.length,
-          examId,
         });
         
         // Sort by orderNumber

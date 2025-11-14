@@ -19,6 +19,8 @@ const MainLayout = ({ children }) => {
 
   // Prevent body scroll when sidebar is open on mobile
   React.useEffect(() => {
+    let timeoutId = null;
+
     if (isSidebarOpen) {
       // Check if we're on mobile (viewport width < 1024px)
       if (typeof window !== "undefined" && window.innerWidth < 1024) {
@@ -27,7 +29,7 @@ const MainLayout = ({ children }) => {
     } else {
       // Only restore scroll if nav menu is also closed (handled by Navbar)
       // Small delay to ensure Navbar's useEffect runs first
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (!document.querySelector('[data-nav-menu-open="true"]')) {
           document.body.style.overflow = "";
         }
@@ -35,7 +37,11 @@ const MainLayout = ({ children }) => {
     }
 
     return () => {
-      // Cleanup on unmount
+      // Cleanup timeout on unmount or dependency change
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Restore scroll on unmount if sidebar is closed
       if (!isSidebarOpen) {
         document.body.style.overflow = "";
       }

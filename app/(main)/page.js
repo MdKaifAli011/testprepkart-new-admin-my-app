@@ -124,8 +124,6 @@ const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Memoize exam data to prevent unnecessary re-renders
-  const memoizedExams = useMemo(() => exams, [exams]);
 
   useEffect(() => {
     let isMounted = true;

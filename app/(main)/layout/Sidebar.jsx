@@ -18,6 +18,7 @@ import {
   createSlug,
   findByIdOrSlug,
 } from "../lib/api";
+import { logger } from "@/utils/logger";
 
 const buildNode = (item) => ({
   id: item?._id ?? "",
@@ -86,10 +87,33 @@ const Sidebar = ({ isOpen = false, onClose }) => {
   const [treeLoading, setTreeLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const hasLoadedExamsRef = useRef(false);
   const treeCacheRef = useRef(new Map());
   const treeLoadingRef = useRef(new Set());
+  const pendingApiRequestsRef = useRef(new Map());
+
+  // Cache limits
+  const MAX_TREE_CACHE_SIZE = 10;
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Cleanup tree cache (LRU eviction)
+  useEffect(() => {
+    if (treeCacheRef.current.size > MAX_TREE_CACHE_SIZE) {
+      // Remove oldest entry (first key)
+      const firstKey = treeCacheRef.current.keys().next().value;
+      treeCacheRef.current.delete(firstKey);
+    }
+  }, [tree]);
 
   const pathSegments = useMemo(
     () => pathname.split("/").filter(Boolean),
@@ -135,7 +159,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
       const response = await fetchExams({ limit: 100 });
       setExams(response || []);
     } catch (err) {
-      console.error("Error loading exams:", err);
+      logger.error("Error loading exams:", err);
       setError("Unable to load exams.");
       // Reset ref on error to allow retry
       hasLoadedExamsRef.current = false;
@@ -166,17 +190,39 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     setError("");
 
     try {
-      const subjects = await fetchSubjectsByExam(examId);
-      console.log("Sidebar: Fetched subjects for examId:", examId, "subjects:", subjects);
-      
+      // Request deduplication: check if request is already pending
+      const requestKey = `subjects-${examId}`;
+      if (pendingApiRequestsRef.current.has(requestKey)) {
+        // Wait for existing request
+        const existingRequest = pendingApiRequestsRef.current.get(requestKey);
+        try {
+          await existingRequest;
+        } catch {
+          // Ignore errors from other requests
+        }
+        // Re-check cache after waiting
+        if (treeCacheRef.current.has(examId)) {
+          setTree(treeCacheRef.current.get(examId));
+          setTreeLoading(false);
+          setError("");
+          treeLoadingRef.current.delete(examId);
+          return;
+        }
+      }
+
+      // Create new request and store it
+      const subjectsPromise = fetchSubjectsByExam(examId);
+      pendingApiRequestsRef.current.set(requestKey, subjectsPromise);
+
+      const subjects = await subjectsPromise;
+      pendingApiRequestsRef.current.delete(requestKey);
+
       const orderedSubjects = (subjects || [])
         .filter((subject) => subject?.name)
         .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
 
-      console.log("Sidebar: Ordered subjects:", orderedSubjects);
-
       if (orderedSubjects.length === 0) {
-        console.warn("Sidebar: No subjects found for examId:", examId);
+        logger.warn("Sidebar: No subjects found for examId:", examId);
         setError("No subjects found for this exam.");
         setTree([]);
         setTreeLoading(false);
@@ -193,9 +239,17 @@ const Sidebar = ({ isOpen = false, onClose }) => {
             units: [],
           };
 
-          const units = await fetchUnitsBySubject(subject._id, examId);
-          console.log(`Sidebar: Fetched units for subject ${subject._id}:`, units);
-          
+          // Request deduplication for units
+          const unitsKey = `units-${subject._id}-${examId}`;
+          let unitsPromise = pendingApiRequestsRef.current.get(unitsKey);
+          if (!unitsPromise) {
+            unitsPromise = fetchUnitsBySubject(subject._id, examId);
+            pendingApiRequestsRef.current.set(unitsKey, unitsPromise);
+          }
+
+          const units = await unitsPromise;
+          pendingApiRequestsRef.current.delete(unitsKey);
+
           const orderedUnits = (units || [])
             .filter((unit) => unit?.name)
             .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
@@ -207,9 +261,18 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                 chapters: [],
               };
 
-              const chapters = await fetchChaptersByUnit(unit._id);
-              console.log(`Sidebar: Fetched chapters for unit ${unit._id}:`, chapters);
-              
+              // Request deduplication for chapters
+              const chaptersKey = `chapters-${unit._id}`;
+              let chaptersPromise =
+                pendingApiRequestsRef.current.get(chaptersKey);
+              if (!chaptersPromise) {
+                chaptersPromise = fetchChaptersByUnit(unit._id);
+                pendingApiRequestsRef.current.set(chaptersKey, chaptersPromise);
+              }
+
+              const chapters = await chaptersPromise;
+              pendingApiRequestsRef.current.delete(chaptersKey);
+
               const orderedChapters = (chapters || [])
                 .filter((chapter) => chapter?.name)
                 .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
@@ -221,9 +284,18 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                     topics: [],
                   };
 
-                  const topics = await fetchTopicsByChapter(chapter._id);
-                  console.log(`Sidebar: Fetched topics for chapter ${chapter._id}:`, topics);
-                  
+                  // Request deduplication for topics
+                  const topicsKey = `topics-${chapter._id}`;
+                  let topicsPromise =
+                    pendingApiRequestsRef.current.get(topicsKey);
+                  if (!topicsPromise) {
+                    topicsPromise = fetchTopicsByChapter(chapter._id);
+                    pendingApiRequestsRef.current.set(topicsKey, topicsPromise);
+                  }
+
+                  const topics = await topicsPromise;
+                  pendingApiRequestsRef.current.delete(topicsKey);
+
                   const orderedTopics = (topics || [])
                     .filter((topic) => topic?.name)
                     .sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0))
@@ -232,7 +304,12 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                   chapterNode.topics = orderedTopics;
                   unitNode.chapters.push(chapterNode);
                 } catch (topicErr) {
-                  console.error(`Error loading topics for chapter ${chapter._id}:`, topicErr);
+                  logger.error(
+                    `Error loading topics for chapter ${chapter._id}:`,
+                    topicErr
+                  );
+                  // Clean up pending request on error
+                  pendingApiRequestsRef.current.delete(`topics-${chapter._id}`);
                   // Continue with empty topics array
                   unitNode.chapters.push({
                     ...buildNode(chapter),
@@ -243,7 +320,12 @@ const Sidebar = ({ isOpen = false, onClose }) => {
 
               subjectNode.units.push(unitNode);
             } catch (chapterErr) {
-              console.error(`Error loading chapters for unit ${unit._id}:`, chapterErr);
+              logger.error(
+                `Error loading chapters for unit ${unit._id}:`,
+                chapterErr
+              );
+              // Clean up pending request on error
+              pendingApiRequestsRef.current.delete(`chapters-${unit._id}`);
               // Continue with empty chapters array
               subjectNode.units.push({
                 ...buildNode(unit),
@@ -254,7 +336,14 @@ const Sidebar = ({ isOpen = false, onClose }) => {
 
           subjectNodes.push(subjectNode);
         } catch (unitErr) {
-          console.error(`Error loading units for subject ${subject._id}:`, unitErr);
+          logger.error(
+            `Error loading units for subject ${subject._id}:`,
+            unitErr
+          );
+          // Clean up pending request on error
+          pendingApiRequestsRef.current.delete(
+            `units-${subject._id}-${examId}`
+          );
           // Continue with empty units array
           subjectNodes.push({
             ...buildNode(subject),
@@ -263,10 +352,8 @@ const Sidebar = ({ isOpen = false, onClose }) => {
         }
       }
 
-      console.log("Sidebar: Built subject nodes:", subjectNodes);
-      
       if (subjectNodes.length === 0) {
-        console.warn("Sidebar: No subject nodes built for examId:", examId);
+        logger.warn("Sidebar: No subject nodes built for examId:", examId);
         setError("No navigation data available for this exam.");
         setTree([]);
       } else {
@@ -275,12 +362,13 @@ const Sidebar = ({ isOpen = false, onClose }) => {
         setError("");
       }
     } catch (err) {
-      console.error("Error loading sidebar tree:", err);
-      console.error("Error details:", {
+      logger.error("Error loading sidebar tree:", {
         message: err.message,
         stack: err.stack,
         examId,
       });
+      // Clean up pending requests on error
+      pendingApiRequestsRef.current.delete(`subjects-${examId}`);
       setError("Unable to load sidebar content.");
       setTree([]);
     } finally {
@@ -317,9 +405,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
     }
 
     loadTree(activeExamId);
-  }, [activeExamId, loadTree]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeExamId]); // loadTree is stable via useCallback
 
-  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedQuery = debouncedQuery.trim().toLowerCase();
 
   const filteredTree = useMemo(
     () => filterTreeByQuery(tree, normalizedQuery),
@@ -363,7 +452,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
         aria-label="Exam navigation sidebar"
       >
         <div className="flex h-full flex-col">
-          <div className="border-b border-gray-200 bg-white/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+          <div className="border-b border-gray-200 bg-white/95 px-4 py-4 backdrop-blur supports-backdrop-filter:bg-white/80">
             <div className="flex items-center justify-between gap-3">
               {onClose && (
                 <button
@@ -439,7 +528,10 @@ const Sidebar = ({ isOpen = false, onClose }) => {
             {!treeLoading && error && (
               <div className="px-4 py-6 text-sm text-red-600">{error}</div>
             )}
-            {!treeLoading && !error && filteredTree.length === 0 && renderEmpty()}
+            {!treeLoading &&
+              !error &&
+              filteredTree.length === 0 &&
+              renderEmpty()}
 
             {!treeLoading && !error && filteredTree.length > 0 && (
               <div className="px-3 py-4">
@@ -462,7 +554,7 @@ const Sidebar = ({ isOpen = false, onClose }) => {
                         >
                           <span className="truncate">{subject.name}</span>
                           <FaChevronRight
-                            className={`h-3 w-3 flex-shrink-0 ${
+                            className={`h-3 w-3 shrink-0 ${
                               isSubjectActive ? "text-white" : "text-gray-400"
                             }`}
                           />

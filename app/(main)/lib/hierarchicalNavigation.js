@@ -16,6 +16,7 @@ import {
   fetchSubTopicsByTopic,
   createSlug,
 } from "./api";
+import { logger } from "@/utils/logger";
 
 /**
  * Get the first item in a hierarchy path
@@ -47,6 +48,10 @@ async function getFirstItemInPath({
         };
       }
     } catch (error) {
+      logger.error("Error fetching navigation item:", {
+        error: error.message,
+        context: { topicId, chapterId, unitId, subjectId, examId },
+      });
       // Continue to next option
     }
   }
@@ -75,6 +80,10 @@ async function getFirstItemInPath({
         }
       }
     } catch (error) {
+      logger.error("Error fetching navigation item:", {
+        error: error.message,
+        context: { topicId, chapterId, unitId, subjectId, examId },
+      });
       // Continue to next option
     }
   }
@@ -114,6 +123,10 @@ async function getFirstItemInPath({
         }
       }
     } catch (error) {
+      logger.error("Error fetching navigation item:", {
+        error: error.message,
+        context: { topicId, chapterId, unitId, subjectId, examId },
+      });
       // Continue to next option
     }
   }
@@ -131,6 +144,10 @@ async function getFirstItemInPath({
         };
       }
     } catch (error) {
+      logger.error("Error fetching navigation item:", {
+        error: error.message,
+        context: { topicId, chapterId, unitId, subjectId, examId },
+      });
       // Continue to next option
     }
   }
@@ -148,6 +165,10 @@ async function getFirstItemInPath({
         };
       }
     } catch (error) {
+      logger.error("Error fetching navigation item:", {
+        error: error.message,
+        context: { topicId, chapterId, unitId, subjectId, examId },
+      });
       // Continue to next option
     }
   }
@@ -209,7 +230,10 @@ export async function getNextSubtopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching next topic:", error);
+    logger.error("Error fetching next topic:", {
+      error: error.message,
+      context: { topicId, chapterId },
+    });
   }
 
   // 3. Try next topic in same chapter (STEP BY STEP - go to topic page, not subtopic)
@@ -243,7 +267,10 @@ export async function getNextSubtopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next topic:", error);
+    logger.error("Error fetching next topic:", {
+      error: error.message,
+      context: { topicId, chapterId },
+    });
   }
 
   // 4. Try next chapter in same unit (STEP BY STEP - go to chapter/topic, not subtopic)
@@ -294,7 +321,10 @@ export async function getNextSubtopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next chapter:", error);
+    logger.error("Error fetching next chapter:", {
+      error: error.message,
+      context: { chapterId, unitId },
+    });
   }
 
   // 5. Try next unit in same subject (STEP BY STEP - go to unit/chapter, not subtopic)
@@ -363,7 +393,10 @@ export async function getNextSubtopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next unit:", error);
+    logger.error("Error fetching next unit:", {
+      error: error.message,
+      context: { unitId, subjectId },
+    });
   }
 
   // 6. Try next subject in same exam (STEP BY STEP - go to subject/unit, not subtopic)
@@ -451,7 +484,10 @@ export async function getNextSubtopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next subject:", error);
+    logger.error("Error fetching next subject:", {
+      error: error.message,
+      context: { subjectId, examId },
+    });
   }
 
   // 7. Try next exam (STEP BY STEP - go to exam/subject, not subtopic)
@@ -557,7 +593,10 @@ export async function getNextSubtopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next exam:", error);
+    logger.error("Error fetching next exam:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   return null;
@@ -619,7 +658,10 @@ export async function getPreviousSubtopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous topic:", error);
+    logger.error("Error fetching previous topic:", {
+      error: error.message,
+      context: { topicId, chapterId },
+    });
   }
 
   // 3. Try previous chapter in same unit
@@ -660,7 +702,10 @@ export async function getPreviousSubtopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous chapter:", error);
+    logger.error("Error fetching previous chapter:", {
+      error: error.message,
+      context: { chapterId, unitId },
+    });
   }
 
   // Continue with unit, subject, exam (similar logic)
@@ -714,7 +759,10 @@ export async function getPreviousSubtopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous unit:", error);
+    logger.error("Error fetching previous unit:", {
+      error: error.message,
+      context: { unitId, subjectId },
+    });
   }
 
   // 4. Try previous subject
@@ -743,7 +791,10 @@ export async function getPreviousSubtopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous subject:", error);
+    logger.error("Error fetching previous subject:", {
+      error: error.message,
+      context: { subjectId, examId },
+    });
   }
 
   // 5. Try previous exam
@@ -772,7 +823,10 @@ export async function getPreviousSubtopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous exam:", error);
+    logger.error("Error fetching previous exam:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   return null;
@@ -871,7 +925,10 @@ export async function getNextTopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next chapter:", error);
+    logger.error("Error fetching next chapter:", {
+      error: error.message,
+      context: { chapterId, unitId },
+    });
   }
 
   // 3. Try next unit in same subject (STEP BY STEP - only go to unit/chapter, not deeper)
@@ -904,7 +961,10 @@ export async function getNextTopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next unit:", error);
+    logger.error("Error fetching next unit:", {
+      error: error.message,
+      context: { unitId, subjectId },
+    });
   }
 
   // 4. Try next subject in same exam (STEP BY STEP - only go to subject/unit, not deeper)
@@ -955,7 +1015,10 @@ export async function getNextTopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next subject:", error);
+    logger.error("Error fetching next subject:", {
+      error: error.message,
+      context: { subjectId, examId },
+    });
   }
 
   // 5. Try next exam (STEP BY STEP - only go to exam/subject, not deeper)
@@ -1006,7 +1069,10 @@ export async function getNextTopic({
       };
     }
   } catch (error) {
-    console.error("Error fetching next exam:", error);
+    logger.error("Error fetching next exam:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   return null;
@@ -1114,7 +1180,10 @@ export async function getPreviousTopic({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous chapter:", error);
+    logger.error("Error fetching previous chapter:", {
+      error: error.message,
+      context: { chapterId, unitId },
+    });
   }
 
   // Continue with unit, subject, exam (similar logic)
@@ -1171,7 +1240,10 @@ export async function getPreviousChapter({
         };
       }
     } catch (error) {
-      console.error("Error fetching previous chapter items:", error);
+      logger.error("Error fetching previous chapter items:", {
+        error: error.message,
+        context: { chapterId },
+      });
     }
   }
 
@@ -1224,7 +1296,10 @@ export async function getPreviousChapter({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous unit:", error);
+    logger.error("Error fetching previous unit:", {
+      error: error.message,
+      context: { unitId, subjectId },
+    });
   }
 
   return null;
@@ -1259,7 +1334,10 @@ export async function getNextChapter({
       };
     }
   } catch (error) {
-    console.error("Error fetching topics:", error);
+    logger.error("Error fetching topics:", {
+      error: error.message,
+      context: { chapterId },
+    });
   }
 
   // 2. If no topics in this chapter, go to next chapter (STEP BY STEP)
@@ -1319,7 +1397,10 @@ export async function getNextChapter({
       };
     }
   } catch (error) {
-    console.error("Error fetching next unit:", error);
+    logger.error("Error fetching next unit:", {
+      error: error.message,
+      context: { unitId, subjectId },
+    });
   }
 
   // 4. Try next subject in same exam (STEP BY STEP - only go to subject/unit, not deeper)
@@ -1370,7 +1451,10 @@ export async function getNextChapter({
       };
     }
   } catch (error) {
-    console.error("Error fetching next subject:", error);
+    logger.error("Error fetching next subject:", {
+      error: error.message,
+      context: { subjectId, examId },
+    });
   }
 
   // 5. Try next exam (STEP BY STEP - only go to exam/subject, not deeper)
@@ -1421,7 +1505,10 @@ export async function getNextChapter({
       };
     }
   } catch (error) {
-    console.error("Error fetching next exam:", error);
+    logger.error("Error fetching next exam:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   return null;
@@ -1454,7 +1541,10 @@ export async function getNextUnit({
       };
     }
   } catch (error) {
-    console.error("Error fetching chapters:", error);
+    logger.error("Error fetching chapters:", {
+      error: error.message,
+      context: { unitId },
+    });
   }
 
   // 2. Try next unit in same subject (STEP BY STEP - only go to unit, not deeper)
@@ -1513,7 +1603,10 @@ export async function getNextSubject({
       };
     }
   } catch (error) {
-    console.error("Error fetching units:", error);
+    logger.error("Error fetching units:", {
+      error: error.message,
+      context: { subjectId },
+    });
   }
 
   // 2. Try next subject in same exam (STEP BY STEP - only go to subject/unit, not deeper)
@@ -1591,7 +1684,10 @@ export async function getNextSubject({
       };
     }
   } catch (error) {
-    console.error("Error fetching next exam:", error);
+    logger.error("Error fetching next exam:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   return null;
@@ -1656,7 +1752,10 @@ export async function getPreviousUnit({
         };
       }
     } catch (error) {
-      console.error("Error fetching previous unit items:", error);
+      logger.error("Error fetching previous unit items:", {
+        error: error.message,
+        context: { unitId },
+      });
     }
   }
 
@@ -1686,7 +1785,10 @@ export async function getPreviousUnit({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous subject:", error);
+    logger.error("Error fetching previous subject:", {
+      error: error.message,
+      context: { subjectId, examId },
+    });
   }
 
   return null;
@@ -1760,7 +1862,10 @@ export async function getPreviousSubject({
         };
       }
     } catch (error) {
-      console.error("Error fetching previous subject items:", error);
+      logger.error("Error fetching previous subject items:", {
+        error: error.message,
+        context: { subjectId },
+      });
     }
   }
 
@@ -1790,7 +1895,10 @@ export async function getPreviousSubject({
       }
     }
   } catch (error) {
-    console.error("Error fetching previous exam:", error);
+    logger.error("Error fetching previous exam:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   return null;
@@ -1873,7 +1981,10 @@ export async function getPreviousExam({
         };
       }
     } catch (error) {
-      console.error("Error fetching previous exam items:", error);
+      logger.error("Error fetching previous exam items:", {
+        error: error.message,
+        context: { examId },
+      });
     }
   }
 
@@ -1903,7 +2014,10 @@ export async function getNextExam({
       };
     }
   } catch (error) {
-    console.error("Error fetching subjects:", error);
+    logger.error("Error fetching subjects:", {
+      error: error.message,
+      context: { examId },
+    });
   }
 
   // 2. Try next exam (STEP BY STEP - only go to exam/subject, not deeper)

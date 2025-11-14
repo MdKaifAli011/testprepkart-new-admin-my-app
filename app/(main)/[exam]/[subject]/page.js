@@ -29,94 +29,8 @@ import {
   getNextSubject,
   getPreviousSubject,
 } from "../../lib/hierarchicalNavigation";
-
-const MATHJAX_SCRIPT_SRC = "/vendor/mathjax/MathJax.js?config=TeX-AMS_HTML";
-
-const loadMathJax = () => {
-  if (typeof window === "undefined") return Promise.resolve(null);
-  if (window.MathJax) return Promise.resolve(window.MathJax);
-
-  if (!loadMathJax.promise) {
-    loadMathJax.promise = new Promise((resolve, reject) => {
-      const existingScript = document.querySelector(
-        `script[src="${MATHJAX_SCRIPT_SRC}"]`
-      );
-
-      if (existingScript) {
-        existingScript.addEventListener("load", () => resolve(window.MathJax), {
-          once: true,
-        });
-        existingScript.addEventListener("error", reject, { once: true });
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = MATHJAX_SCRIPT_SRC;
-      script.async = true;
-      script.addEventListener("load", () => resolve(window.MathJax), {
-        once: true,
-      });
-      script.addEventListener("error", reject, { once: true });
-      document.head.appendChild(script);
-    });
-  }
-
-  return loadMathJax.promise;
-};
-
-const RichContent = ({ html }) => {
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!html || typeof window === "undefined") {
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    loadMathJax()
-      .then((MathJax) => {
-        if (!MathJax || !isMounted || !containerRef.current) return;
-
-        try {
-          if (typeof MathJax.typesetClear === "function") {
-            MathJax.typesetClear([containerRef.current]);
-          }
-
-          if (typeof MathJax.texReset === "function") {
-            MathJax.texReset();
-          }
-
-          if (typeof MathJax.typesetPromise === "function") {
-            return MathJax.typesetPromise([containerRef.current]);
-          }
-
-          if (typeof MathJax.typeset === "function") {
-            MathJax.typeset([containerRef.current]);
-          }
-        } catch (error) {
-          console.error("MathJax typeset failed", error);
-        }
-      })
-      .catch((error) => {
-        console.error("Unable to load MathJax", error);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [html]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="rich-text-content"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-};
+import RichContent from "../../components/RichContent";
+import { logger } from "@/utils/logger";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -139,6 +53,8 @@ const SubjectPage = () => {
 
   // Fetch exam, subject, and units
   useEffect(() => {
+    let isCancelled = false;
+
     const loadData = async () => {
       try {
         setIsLoading(true);
@@ -146,6 +62,8 @@ const SubjectPage = () => {
 
         // Fetch exam
         const fetchedExam = await fetchExamById(examId);
+        if (isCancelled) return;
+        
         if (!fetchedExam) {
           setError("Exam not found");
           return;
@@ -155,6 +73,7 @@ const SubjectPage = () => {
         // Fetch subjects for this exam
         const examIdValue = fetchedExam._id || examId;
         const fetchedSubjects = await fetchSubjectsByExam(examIdValue);
+        if (isCancelled) return;
         setSubjects(fetchedSubjects);
 
         // Find subject by slug
@@ -166,10 +85,12 @@ const SubjectPage = () => {
 
         // Fetch full subject data
         const fullSubjectData = await fetchSubjectById(foundSubject._id);
+        if (isCancelled) return;
         setSubject(fullSubjectData || foundSubject);
 
         // Fetch subject details separately
         const details = await fetchSubjectDetailsById(foundSubject._id);
+        if (isCancelled) return;
         setSubjectDetails(details || {
           content: "",
           title: "",
@@ -191,6 +112,7 @@ const SubjectPage = () => {
           foundSubject._id,
           examIdValue
         );
+        if (isCancelled) return;
         setUnits(fetchedUnits);
 
         // Calculate hierarchical navigation
@@ -202,6 +124,7 @@ const SubjectPage = () => {
           currentIndex: subjectIndex,
           allItems: fetchedSubjects,
         });
+        if (isCancelled) return;
         setNextNav(next);
 
         const prev = await getPreviousSubject({
@@ -212,17 +135,27 @@ const SubjectPage = () => {
           currentIndex: subjectIndex,
           allItems: fetchedSubjects,
         });
+        if (isCancelled) return;
         setPrevNav(prev);
       } catch (err) {
-        setError("Failed to load subject data. Please try again later.");
+        if (!isCancelled) {
+          logger.error("Error loading subject data:", err);
+          setError("Failed to load subject data. Please try again later.");
+        }
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     if (examId && subjectSlug) {
       loadData();
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [examId, subjectSlug]);
 
   if (isLoading) {

@@ -18,94 +18,8 @@ import { ERROR_MESSAGES, PLACEHOLDERS } from "@/constants";
 import { getNextExam, getPreviousExam } from "../lib/hierarchicalNavigation";
 import Link from "next/link";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-
-const MATHJAX_SCRIPT_SRC = "/vendor/mathjax/MathJax.js?config=TeX-AMS_HTML";
-
-const loadMathJax = () => {
-  if (typeof window === "undefined") return Promise.resolve(null);
-  if (window.MathJax) return Promise.resolve(window.MathJax);
-
-  if (!loadMathJax.promise) {
-    loadMathJax.promise = new Promise((resolve, reject) => {
-      const existingScript = document.querySelector(
-        `script[src="${MATHJAX_SCRIPT_SRC}"]`
-      );
-
-      if (existingScript) {
-        existingScript.addEventListener("load", () => resolve(window.MathJax), {
-          once: true,
-        });
-        existingScript.addEventListener("error", reject, { once: true });
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = MATHJAX_SCRIPT_SRC;
-      script.async = true;
-      script.addEventListener("load", () => resolve(window.MathJax), {
-        once: true,
-      });
-      script.addEventListener("error", reject, { once: true });
-      document.head.appendChild(script);
-    });
-  }
-
-  return loadMathJax.promise;
-};
-
-const RichContent = ({ html }) => {
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!html || typeof window === "undefined") {
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    loadMathJax()
-      .then((MathJax) => {
-        if (!MathJax || !isMounted || !containerRef.current) return;
-
-        try {
-          if (typeof MathJax.typesetClear === "function") {
-            MathJax.typesetClear([containerRef.current]);
-          }
-
-          if (typeof MathJax.texReset === "function") {
-            MathJax.texReset();
-          }
-
-          if (typeof MathJax.typesetPromise === "function") {
-            return MathJax.typesetPromise([containerRef.current]);
-          }
-
-          if (typeof MathJax.typeset === "function") {
-            MathJax.typeset([containerRef.current]);
-          }
-        } catch (error) {
-          console.error("MathJax typeset failed", error);
-        }
-      })
-      .catch((error) => {
-        console.error("Unable to load MathJax", error);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [html]);
-
-  return (
-    <div
-      ref={containerRef}
-      className="rich-text-content"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-};
+import RichContent from "../components/RichContent";
+import { logger } from "@/utils/logger";
 
 const TABS = ["Overview", "Discussion Forum", "Practice Test", "Performance"];
 
@@ -144,8 +58,8 @@ const ExamPage = () => {
       try {
         const details = await fetchExamDetailsById(exam._id);
         setExamDetails(details);
-      } catch (error) {
-        console.error("Error fetching exam details:", error);
+        } catch (error) {
+        logger.error("Error fetching exam details:", error);
         setExamDetails({
           content: "",
           title: "",
@@ -177,12 +91,16 @@ const ExamPage = () => {
 
   // Calculate navigation
   useEffect(() => {
+    let isCancelled = false;
+
     const calculateNavigation = async () => {
-      if (!exam?._id) return;
+      if (!exam?._id || isCancelled) return;
 
       try {
         // Fetch all exams to get index
         const allExams = await fetchExams({ limit: 100 });
+        if (isCancelled) return;
+        
         setExams(allExams);
         const examIndex = allExams.findIndex((e) => e._id === exam._id);
         setCurrentExamIndex(examIndex);
@@ -194,6 +112,7 @@ const ExamPage = () => {
           currentIndex: examIndex,
           allItems: allExams,
         });
+        if (isCancelled) return;
         setNextNav(next);
 
         // Calculate previous navigation
@@ -203,15 +122,22 @@ const ExamPage = () => {
           currentIndex: examIndex,
           allItems: allExams,
         });
+        if (isCancelled) return;
         setPrevNav(prev);
       } catch (error) {
-        console.error("Error calculating navigation:", error);
+        if (!isCancelled) {
+          logger.error("Error calculating navigation:", error);
+        }
       }
     };
 
     if (exam) {
       calculateNavigation();
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [exam, examSlug]);
 
   const isLoading = examLoading || subjectsLoading;

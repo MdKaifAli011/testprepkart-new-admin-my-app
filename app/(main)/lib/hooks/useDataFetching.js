@@ -25,12 +25,39 @@ export function useDataFetching(
   const abortControllerRef = useRef(null);
   const fetchFunctionRef = useRef(fetchFunction);
 
+  // Cache limits
+  const MAX_CACHE_SIZE = 50;
+
+  // Cleanup expired and excess cache entries (LRU eviction)
+  const cleanupCache = useCallback(() => {
+    const now = Date.now();
+    const entries = Object.entries(cacheRef.current);
+    
+    // Remove expired entries
+    entries.forEach(([key, value]) => {
+      if (now - value.timestamp > cacheTime) {
+        delete cacheRef.current[key];
+      }
+    });
+    
+    // If still over limit, remove oldest entries (LRU)
+    const remainingEntries = Object.entries(cacheRef.current);
+    if (remainingEntries.length > MAX_CACHE_SIZE) {
+      const sorted = remainingEntries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const toDelete = sorted.slice(0, remainingEntries.length - MAX_CACHE_SIZE);
+      toDelete.forEach(([key]) => delete cacheRef.current[key]);
+    }
+  }, [cacheTime]);
+
   // Update ref when fetchFunction changes
   useEffect(() => {
     fetchFunctionRef.current = fetchFunction;
   }, [fetchFunction]);
 
   const fetchData = useCallback(async () => {
+    // Cleanup cache before checking
+    cleanupCache();
+    
     // Check cache first
     if (cacheKey && cacheRef.current[cacheKey]) {
       const cached = cacheRef.current[cacheKey];
@@ -64,6 +91,9 @@ export function useDataFetching(
       if (!abortControllerRef.current.signal.aborted) {
         setData(result);
 
+        // Cleanup cache before adding new entry
+        cleanupCache();
+        
         // Cache the result
         if (cacheKey) {
           cacheRef.current[cacheKey] = {
@@ -83,20 +113,24 @@ export function useDataFetching(
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cacheKey, cacheTime, ...dependencies]);
+  }, [cacheKey, cacheTime, cleanupCache, ...dependencies]);
 
   useEffect(() => {
     if (enabled && refetchOnMount) {
       fetchData();
     }
 
+    // Periodic cache cleanup
+    const cleanupInterval = setInterval(cleanupCache, cacheTime / 2);
+
     return () => {
+      clearInterval(cleanupInterval);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, refetchOnMount, ...dependencies]);
+  }, [enabled, refetchOnMount, cleanupCache, cacheTime, ...dependencies]);
 
   const refetch = useCallback(() => {
     if (cacheKey) {
