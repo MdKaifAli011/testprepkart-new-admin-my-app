@@ -7,8 +7,29 @@ import { successResponse, errorResponse, handleApiError } from "@/utils/apiRespo
 import { STATUS, ERROR_MESSAGES } from "@/constants";
 
 // Cache for frequently accessed queries (simple in-memory cache)
-const queryCache = new Map();
+export const queryCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 50; // Maximum cache entries
+
+// Helper function to cleanup cache (LRU + expired entries)
+function cleanupCache() {
+  const now = Date.now();
+  
+  // First, remove expired entries
+  for (const [key, value] of queryCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      queryCache.delete(key);
+    }
+  }
+  
+  // If still over limit, remove oldest entries (LRU)
+  if (queryCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(queryCache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toDelete = entries.slice(0, entries.length - MAX_CACHE_SIZE);
+    toDelete.forEach(([key]) => queryCache.delete(key));
+  }
+}
 
 // ---------- GET ALL UNITS ----------
 export async function GET(request) {
@@ -71,15 +92,7 @@ export async function GET(request) {
         data: response,
         timestamp: now,
       });
-      
-      // Clean up old cache entries periodically
-      if (queryCache.size > 100) {
-        for (const [key, value] of queryCache.entries()) {
-          if (now - value.timestamp > CACHE_TTL) {
-            queryCache.delete(key);
-          }
-        }
-      }
+      cleanupCache();
     }
 
     return NextResponse.json(response);

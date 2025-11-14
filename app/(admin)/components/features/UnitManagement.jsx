@@ -172,6 +172,16 @@ const UnitsManagement = () => {
     fetchSubjects();
   }, [fetchUnits]);
 
+  // Auto-clear error after 5 seconds with cleanup
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   // Filter subjects based on selected exam for filters
   const filteredFilterSubjects = useMemo(() => {
     if (!filterExam) return [];
@@ -612,9 +622,6 @@ const UnitsManagement = () => {
           error.response?.data?.message || error.message
         }`
       );
-
-      // Clear error after 5 seconds
-      setTimeout(() => setError(null), 5000);
     }
   };
 

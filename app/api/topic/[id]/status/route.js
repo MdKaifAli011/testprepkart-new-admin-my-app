@@ -5,6 +5,7 @@ import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
 import { requireAction } from "@/middleware/authMiddleware";
+import { logger } from "@/utils/logger";
 
 // ---------- PATCH TOPIC STATUS (with Cascading) ----------
 export async function PATCH(request, { params }) {
@@ -52,13 +53,13 @@ export async function PATCH(request, { params }) {
     }
 
     // Cascading: Update all children status
-    console.log(`🔄 Cascading status update to ${status} for topic ${id}`);
+    logger.info(`Cascading status update to ${status} for topic ${id}`);
 
     const result = await SubTopic.updateMany(
       { topicId: id },
       { $set: { status } }
     );
-    console.log(`✅ Updated ${result.modifiedCount} SubTopics`);
+    logger.info(`Updated ${result.modifiedCount} SubTopics`);
 
     return NextResponse.json({
       success: true,
@@ -68,7 +69,7 @@ export async function PATCH(request, { params }) {
       data: updated,
     });
   } catch (error) {
-    console.error("Error updating topic status:", error);
+    logger.error("Error updating topic status:", error);
     return NextResponse.json(
       { success: false, message: "Failed to update topic status" },
       { status: 500 }

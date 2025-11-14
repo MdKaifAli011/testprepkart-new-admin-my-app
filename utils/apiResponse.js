@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@/constants";
+import { logger } from "@/utils/logger";
 
 /**
  * Create standardized success response
@@ -71,7 +72,7 @@ export function forbiddenResponse() {
  * Handle API errors consistently
  */
 export function handleApiError(error, customMessage = null) {
-  console.error("API Error:", error);
+  logger.error("API Error:", error);
   
   // Handle Mongoose validation errors
   if (error.name === "ValidationError") {

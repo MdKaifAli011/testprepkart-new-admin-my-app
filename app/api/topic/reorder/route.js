@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Topic from "@/models/Topic";
 import { requireAction } from "@/middleware/authMiddleware";
+import { logger } from "@/utils/logger";
 
 export async function POST(request) {
   return handleReorder(request);
@@ -97,7 +98,7 @@ async function handleReorder(request) {
       message: "Topics reordered successfully",
     });
   } catch (error) {
-    console.error("❌ Error reordering topics:", error);
+    logger.error("Error reordering topics:", error);
     return NextResponse.json(
       { success: false, message: "Failed to reorder topics" },
       { status: 500 }

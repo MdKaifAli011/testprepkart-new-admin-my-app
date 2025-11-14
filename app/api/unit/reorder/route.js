@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Unit from "@/models/Unit";
 import mongoose from "mongoose";
+import { logger } from "@/utils/logger";
 
 // ---------- REORDER UNITS ----------
 export async function PATCH(request) {
@@ -83,7 +84,7 @@ export async function PATCH(request) {
       message: "Units reordered successfully",
     });
   } catch (error) {
-    console.error("Error reordering units:", error);
+    logger.error("Error reordering units:", error);
     return NextResponse.json(
       { success: false, message: "Failed to reorder units" },
       { status: 500 }

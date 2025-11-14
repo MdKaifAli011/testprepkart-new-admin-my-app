@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import { successResponse, errorResponse, handleApiError, notFoundResponse } from "@/utils/apiResponse";
 import { ERROR_MESSAGES } from "@/constants";
 import { requireAction, requireAuth } from "@/middleware/authMiddleware";
+import { logger } from "@/utils/logger";
 
 // ---------- GET SINGLE EXAM ----------
 export async function GET(request, { params }) {
@@ -142,7 +143,7 @@ export async function PATCH(request, { params }) {
 
     // Cascading: Update all children status if status changed
     if (status) {
-      console.log(`🔄 Cascading status update to ${status} for exam ${id}`);
+      logger.info(`Cascading status update to ${status} for exam ${id}`);
       
       // Find all subjects in this exam
       const subjects = await Subject.find({ examId: id });
@@ -168,7 +169,7 @@ export async function PATCH(request, { params }) {
           { $set: { status } }
         );
       }
-      console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
+      logger.info(`Updated ${subTopicsResult.modifiedCount} SubTopics`);
       
       // Update all topics in these chapters
       let topicsResult = { modifiedCount: 0 };
@@ -178,7 +179,7 @@ export async function PATCH(request, { params }) {
           { $set: { status } }
         );
       }
-      console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
+      logger.info(`Updated ${topicsResult.modifiedCount} Topics`);
       
       // Update all chapters in these units
       let chaptersResult = { modifiedCount: 0 };
@@ -188,7 +189,7 @@ export async function PATCH(request, { params }) {
           { $set: { status } }
         );
       }
-      console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
+      logger.info(`Updated ${chaptersResult.modifiedCount} Chapters`);
       
       // Update all units in these subjects
       let unitsResult = { modifiedCount: 0 };
@@ -198,14 +199,14 @@ export async function PATCH(request, { params }) {
           { $set: { status } }
         );
       }
-      console.log(`✅ Updated ${unitsResult.modifiedCount} Units`);
+      logger.info(`Updated ${unitsResult.modifiedCount} Units`);
       
       // Update all subjects in this exam
       const subjectsResult = await Subject.updateMany(
         { examId: id },
         { $set: { status } }
       );
-      console.log(`✅ Updated ${subjectsResult.modifiedCount} Subjects`);
+      logger.info(`Updated ${subjectsResult.modifiedCount} Subjects`);
     }
 
     // Clear cache for exam queries
@@ -213,10 +214,10 @@ export async function PATCH(request, { params }) {
       const examRouteModule = await import("../route");
       if (examRouteModule?.queryCache) {
         examRouteModule.queryCache.clear();
-        console.log("✅ Cleared exam query cache");
+        logger.info("Cleared exam query cache");
       }
     } catch (cacheError) {
-      console.warn("⚠️ Could not clear exam cache:", cacheError);
+      logger.warn("Could not clear exam cache:", cacheError);
     }
 
     return successResponse(

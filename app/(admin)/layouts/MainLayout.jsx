@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import AuthGuard from "../components/auth/AuthGuard";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const MainLayout = ({ children }) => {
   const router = useRouter();
@@ -41,7 +42,7 @@ const MainLayout = ({ children }) => {
           router.push("/admin/login");
         }
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        // Error parsing user data - redirect to login
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         router.push("/admin/login");
@@ -80,18 +81,20 @@ const MainLayout = ({ children }) => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
-        <Header onMenuToggle={toggleSidebar} />
-        <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-50">
+          <Header onMenuToggle={toggleSidebar} />
+          <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
-        <main className="pt-16 lg:ml-64 lg:pt-20 px-6 py-10 transition-all duration-300 ease-in-out">
-          <div className="w-full max-w-7xl mx-auto">
-            <div className="space-y-6">
-              {children}
+          <main className="pt-16 lg:ml-64 lg:pt-20 px-6 py-10 transition-all duration-300 ease-in-out">
+            <div className="w-full max-w-7xl mx-auto">
+              <div className="space-y-6">
+                {children}
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
+          </main>
+        </div>
+      </ErrorBoundary>
     </AuthGuard>
   );
 };

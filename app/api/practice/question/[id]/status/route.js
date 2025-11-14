@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb";
 import PracticeQuestion from "@/models/PracticeQuestion";
 import mongoose from "mongoose";
 import { successResponse, errorResponse, notFoundResponse } from "@/utils/apiResponse";
+import { logger } from "@/utils/logger";
 
 // ---------- PATCH PRACTICE QUESTION STATUS ----------
 export async function PATCH(request, { params }) {
@@ -40,10 +41,10 @@ export async function PATCH(request, { params }) {
       const questionRouteModule = await import("../../route");
       if (questionRouteModule?.queryCache) {
         questionRouteModule.queryCache.clear();
-        console.log("✅ Cleared practice question query cache");
+        logger.info("Cleared practice question query cache");
       }
     } catch (cacheError) {
-      console.warn("⚠️ Could not clear practice question cache:", cacheError);
+      logger.warn("Could not clear practice question cache:", cacheError);
     }
 
     return successResponse(
@@ -51,7 +52,7 @@ export async function PATCH(request, { params }) {
       `Practice question ${status === "inactive" ? "deactivated" : "activated"} successfully`
     );
   } catch (error) {
-    console.error("Error updating practice question status:", error);
+    logger.error("Error updating practice question status:", error);
     return errorResponse("Failed to update practice question status", 500);
   }
 }

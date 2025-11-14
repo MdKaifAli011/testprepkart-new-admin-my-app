@@ -105,11 +105,19 @@ export function usePermissions() {
 
     window.addEventListener("storage", handleStorageChange);
 
-    // Check permissions periodically (in case user data changes)
-    const interval = setInterval(checkPermissions, 1000);
+    // Listen for custom permission change events
+    const handlePermissionChangeEvent = () => {
+      checkPermissions();
+    };
+    window.addEventListener("permission-change", handlePermissionChangeEvent);
+
+    // Check permissions periodically (reduced frequency from 1s to 5s for better performance)
+    // This is a fallback for when CustomEvent is not triggered
+    const interval = setInterval(checkPermissions, 5000);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("permission-change", handlePermissionChangeEvent);
       clearInterval(interval);
     };
   }, []);

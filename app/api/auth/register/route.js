@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
 import jwt from "jsonwebtoken";
 import { successResponse, errorResponse, handleApiError } from "@/utils/apiResponse";
+import { getJwtSecret } from "@/lib/auth";
 
 export async function POST(request) {
   try {
@@ -53,13 +54,14 @@ export async function POST(request) {
     });
 
     // Generate JWT token
+    const jwtSecret = getJwtSecret();
     const token = jwt.sign(
       {
         userId: newUser._id,
         email: newUser.email,
         role: newUser.role,
       },
-      process.env.JWT_SECRET || "your-secret-key",
+      jwtSecret,
       {
         expiresIn: process.env.JWT_EXPIRES_IN || "24h",
       }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Chapter from "@/models/Chapter";
+import { logger } from "@/utils/logger";
 
 export async function POST(request) {
   return handleReorder(request);
@@ -96,7 +97,7 @@ async function handleReorder(request) {
       modifiedCount: result.modifiedCount,
     });
   } catch (error) {
-    console.error("Error reordering chapters:", error);
+    logger.error("Error reordering chapters:", error);
     return NextResponse.json(
       { success: false, message: "Failed to reorder chapters" },
       { status: 500 }

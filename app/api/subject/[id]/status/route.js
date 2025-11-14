@@ -7,6 +7,7 @@ import Chapter from "@/models/Chapter";
 import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
+import { logger } from "@/utils/logger";
 
 // ---------- PATCH SUBJECT STATUS (with Cascading) ----------
 export async function PATCH(request, { params }) {
@@ -48,7 +49,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Cascading: Update all children status
-    console.log(`🔄 Cascading status update to ${status} for subject ${id}`);
+    logger.info(`Cascading status update to ${status} for subject ${id}`);
 
     // Find all units in this subject
     const units = await Unit.find({ subjectId: id });
@@ -70,7 +71,7 @@ export async function PATCH(request, { params }) {
         { $set: { status } }
       );
     }
-    console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
+    logger.info(`Updated ${subTopicsResult.modifiedCount} SubTopics`);
 
     // Update all topics in these chapters
     let topicsResult = { modifiedCount: 0 };
@@ -80,7 +81,7 @@ export async function PATCH(request, { params }) {
         { $set: { status } }
       );
     }
-    console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
+    logger.info(`Updated ${topicsResult.modifiedCount} Topics`);
 
     // Update all chapters in these units
     let chaptersResult = { modifiedCount: 0 };
@@ -90,24 +91,24 @@ export async function PATCH(request, { params }) {
         { $set: { status } }
       );
     }
-    console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
+    logger.info(`Updated ${chaptersResult.modifiedCount} Chapters`);
 
     // Update all units in this subject
     const unitsResult = await Unit.updateMany(
       { subjectId: id },
       { $set: { status } }
     );
-    console.log(`✅ Updated ${unitsResult.modifiedCount} Units`);
+    logger.info(`Updated ${unitsResult.modifiedCount} Units`);
 
     // Clear cache for subject queries
     try {
       const subjectRouteModule = await import("../../route");
       if (subjectRouteModule?.queryCache) {
         subjectRouteModule.queryCache.clear();
-        console.log("✅ Cleared subject query cache");
+        logger.info("Cleared subject query cache");
       }
     } catch (cacheError) {
-      console.warn("⚠️ Could not clear subject cache:", cacheError);
+      logger.warn("Could not clear subject cache:", cacheError);
     }
 
     return NextResponse.json({
@@ -118,7 +119,7 @@ export async function PATCH(request, { params }) {
       data: updated,
     });
   } catch (error) {
-    console.error("Error updating subject status:", error);
+    logger.error("Error updating subject status:", error);
     return NextResponse.json(
       { success: false, message: "Failed to update subject status" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { logger } from "@/utils/logger";
 
 dotenv.config();
 
@@ -34,7 +35,7 @@ export const config = {
 const requiredVars = ["MONGODB_URI", "JWT_SECRET", "SESSION_SECRET"];
 requiredVars.forEach((key) => {
   if (!process.env[key]) {
-    console.warn(`⚠️ Missing environment variable: ${key}`);
+    logger.warn(`⚠️ Missing environment variable: ${key}`);
   }
 });
 

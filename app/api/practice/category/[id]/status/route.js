@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import PracticeCategory from "@/models/PracticeCategory";
 import mongoose from "mongoose";
+import { logger } from "@/utils/logger";
 
 // ---------- PATCH PRACTICE CATEGORY STATUS ----------
 export async function PATCH(request, { params }) {
@@ -50,10 +51,10 @@ export async function PATCH(request, { params }) {
       const categoryRouteModule = await import("../../route");
       if (categoryRouteModule?.queryCache) {
         categoryRouteModule.queryCache.clear();
-        console.log("✅ Cleared practice category query cache");
+        logger.info("Cleared practice category query cache");
       }
     } catch (cacheError) {
-      console.warn("⚠️ Could not clear practice category cache:", cacheError);
+      logger.warn("Could not clear practice category cache:", cacheError);
     }
 
     return NextResponse.json({
@@ -62,7 +63,7 @@ export async function PATCH(request, { params }) {
       data: updated,
     });
   } catch (error) {
-    console.error("Error updating practice category status:", error);
+    logger.error("Error updating practice category status:", error);
     return NextResponse.json(
       { success: false, message: "Failed to update practice category status" },
       { status: 500 }

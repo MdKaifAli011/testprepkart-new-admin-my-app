@@ -74,8 +74,18 @@ export function getCacheStats() {
   };
 }
 
-// Auto-cleanup expired cache every 5 minutes
+// Auto-cleanup expired cache every 5 minutes (client-side only)
+let cleanupInterval = null;
+
 if (typeof window !== "undefined") {
-  setInterval(clearExpiredCache, 5 * 60 * 1000);
+  cleanupInterval = setInterval(clearExpiredCache, 5 * 60 * 1000);
+  
+  // Clean up on page unload
+  window.addEventListener('beforeunload', () => {
+    if (cleanupInterval) {
+      clearInterval(cleanupInterval);
+      cleanupInterval = null;
+    }
+  });
 }
 

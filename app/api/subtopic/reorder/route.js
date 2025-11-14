@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import SubTopic from "@/models/SubTopic";
+import { logger } from "@/utils/logger";
 
 export async function POST(request) {
   return handleReorder(request);
@@ -90,7 +91,7 @@ async function handleReorder(request) {
       message: "SubTopics reordered successfully",
     });
   } catch (error) {
-    console.error("❌ Error reordering subTopics:", error);
+    logger.error("Error reordering subTopics:", error);
     return NextResponse.json(
       { success: false, message: "Failed to reorder subTopics" },
       { status: 500 }

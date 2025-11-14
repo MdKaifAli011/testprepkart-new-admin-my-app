@@ -83,9 +83,10 @@ const TopicManagement = () => {
   // Fetch exams from API
   const fetchExams = useCallback(async () => {
     try {
-      const response = await api.get("/exam");
+      // Fetch all exams (active and inactive) for dropdown
+      const response = await api.get("/exam?status=all");
       if (response.data.success) {
-        setExams(response.data.data);
+        setExams(response.data.data || []);
       }
     } catch (error) {
       console.error("❌ Error fetching exams:", error);
@@ -95,36 +96,57 @@ const TopicManagement = () => {
   // Fetch subjects from API
   const fetchSubjects = useCallback(async () => {
     try {
-      const response = await api.get("/subject");
+      // Fetch all subjects (active and inactive) for dropdown
+      const response = await api.get("/subject?status=all");
       if (response.data.success) {
-        setSubjects(response.data.data);
+        setSubjects(response.data.data || []);
       }
     } catch (error) {
       console.error("❌ Error fetching subjects:", error);
     }
   }, []);
 
-  // Fetch units from API
-  const fetchUnits = useCallback(async () => {
+  // Fetch units from API based on exam and subject
+  const fetchUnits = useCallback(async (examId, subjectId) => {
+    if (!examId || !subjectId) {
+      setUnits([]);
+      return;
+    }
     try {
-      const response = await api.get("/unit");
+      // Fetch units for the selected exam and subject
+      const response = await api.get(
+        `/unit?examId=${examId}&subjectId=${subjectId}&status=all&limit=1000`
+      );
       if (response.data.success) {
-        setUnits(response.data.data);
+        setUnits(response.data.data || []);
+      } else {
+        setUnits([]);
       }
     } catch (error) {
       console.error("❌ Error fetching units:", error);
+      setUnits([]);
     }
   }, []);
 
-  // Fetch chapters from API
-  const fetchChapters = useCallback(async () => {
+  // Fetch chapters from API based on unit
+  const fetchChapters = useCallback(async (unitId) => {
+    if (!unitId) {
+      setChapters([]);
+      return;
+    }
     try {
-      const response = await api.get("/chapter");
+      // Fetch chapters for the selected unit
+      const response = await api.get(
+        `/chapter?unitId=${unitId}&status=all&limit=1000`
+      );
       if (response.data.success) {
-        setChapters(response.data.data);
+        setChapters(response.data.data || []);
+      } else {
+        setChapters([]);
       }
     } catch (error) {
       console.error("❌ Error fetching chapters:", error);
+      setChapters([]);
     }
   }, []);
 
@@ -133,101 +155,86 @@ const TopicManagement = () => {
     fetchTopics();
     fetchExams();
     fetchSubjects();
-    fetchUnits();
-    fetchChapters();
-  }, [fetchTopics, fetchExams, fetchSubjects, fetchUnits, fetchChapters]);
+    // Don't fetch units and chapters on mount - will fetch when parent is selected
+  }, [fetchTopics, fetchExams, fetchSubjects]);
+
+  // Auto-clear error after 5 seconds with cleanup
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   // Filter subjects based on selected exam
   const filteredSubjects = useMemo(() => {
-    if (formData.examId && subjects) {
-      const filtered = subjects.filter(
-        (subject) =>
-          subject.examId._id === formData.examId ||
-          subject.examId === formData.examId
-      );
-      return filtered;
+    if (!formData.examId) {
+      return subjects || [];
     }
-    return subjects || [];
+    if (!subjects || subjects.length === 0) {
+      return [];
+    }
+    // Filter subjects by selected exam (handle both populated and non-populated examId)
+    return subjects.filter(
+      (subject) =>
+        subject.examId?._id === formData.examId ||
+        subject.examId === formData.examId
+    );
   }, [formData.examId, subjects]);
 
-  // Filter units based on selected subject
+  // Units are already filtered by API call, so return all units
   const filteredUnits = useMemo(() => {
-    if (formData.subjectId && units) {
-      const filtered = units.filter(
-        (unit) =>
-          unit.subjectId._id === formData.subjectId ||
-          unit.subjectId === formData.subjectId
-      );
-      return filtered;
-    }
+    // Units are already filtered by fetchUnits(examId, subjectId), so just return them
     return units || [];
-  }, [formData.subjectId, units]);
+  }, [units]);
 
-  // Filter chapters based on selected unit
+  // Chapters are already filtered by API call, so return all chapters
   const filteredChapters = useMemo(() => {
-    let result = [];
-    if (formData.unitId && chapters) {
-      result = chapters.filter(
-        (chapter) =>
-          chapter.unitId._id === formData.unitId ||
-          chapter.unitId === formData.unitId
-      );
-    } else {
-      result = chapters || [];
-    }
+    // Chapters are already filtered by fetchChapters(unitId), so just return them
     // Sort by orderNumber in ascending order
-    return result.sort((a, b) => {
+    const sorted = (chapters || []).sort((a, b) => {
       const ao = a.orderNumber || 0;
       const bo = b.orderNumber || 0;
       return ao - bo;
     });
-  }, [formData.unitId, chapters]);
+    return sorted;
+  }, [chapters]);
 
   // Filter subjects for edit form
   const filteredEditSubjects = useMemo(() => {
-    if (editFormData.examId && subjects) {
-      const filtered = subjects.filter(
-        (subject) =>
-          subject.examId._id === editFormData.examId ||
-          subject.examId === editFormData.examId
-      );
-      return filtered;
+    if (!editFormData.examId) {
+      return subjects || [];
     }
-    return subjects || [];
+    if (!subjects || subjects.length === 0) {
+      return [];
+    }
+    // Filter subjects by selected exam (handle both populated and non-populated examId)
+    return subjects.filter(
+      (subject) =>
+        subject.examId?._id === editFormData.examId ||
+        subject.examId === editFormData.examId
+    );
   }, [editFormData.examId, subjects]);
 
-  // Filter units for edit form
+  // Units for edit form are already filtered by API call, so return all units
   const filteredEditUnits = useMemo(() => {
-    if (editFormData.subjectId && units) {
-      const filtered = units.filter(
-        (unit) =>
-          unit.subjectId._id === editFormData.subjectId ||
-          unit.subjectId === editFormData.subjectId
-      );
-      return filtered;
-    }
+    // Units are already filtered by fetchUnits(examId, subjectId), so just return them
     return units || [];
-  }, [editFormData.subjectId, units]);
+  }, [units]);
 
-  // Filter chapters for edit form
+  // Chapters for edit form are already filtered by API call, so return all chapters
   const filteredEditChapters = useMemo(() => {
-    let result = [];
-    if (editFormData.unitId && chapters) {
-      result = chapters.filter(
-        (chapter) =>
-          chapter.unitId._id === editFormData.unitId ||
-          chapter.unitId === editFormData.unitId
-      );
-    } else {
-      result = chapters || [];
-    }
+    // Chapters are already filtered by fetchChapters(unitId), so just return them
     // Sort by orderNumber in ascending order
-    return result.sort((a, b) => {
+    const sorted = (chapters || []).sort((a, b) => {
       const ao = a.orderNumber || 0;
       const bo = b.orderNumber || 0;
       return ao - bo;
     });
-  }, [editFormData.unitId, chapters]);
+    return sorted;
+  }, [chapters]);
 
   // Filter subjects based on selected exam for filters
   const filteredFilterSubjects = useMemo(() => {
@@ -320,17 +327,32 @@ const TopicManagement = () => {
         newData.subjectId = "";
         newData.unitId = "";
         newData.chapterId = "";
+        setUnits([]); // Clear units when exam changes
+        setChapters([]); // Clear chapters when exam changes
       }
       
-      // Reset unit when subject changes
+      // Reset unit when subject changes and fetch units for the selected exam and subject
       if (name === "subjectId" && value !== prev.subjectId) {
         newData.unitId = "";
         newData.chapterId = "";
+        setChapters([]); // Clear chapters when subject changes
+        // Fetch units for the selected exam and subject
+        if (newData.examId && value) {
+          fetchUnits(newData.examId, value);
+        } else {
+          setUnits([]);
+        }
       }
       
-      // Reset chapter when unit changes
+      // Reset chapter when unit changes and fetch chapters for the selected unit
       if (name === "unitId" && value !== prev.unitId) {
         newData.chapterId = "";
+        // Fetch chapters for the selected unit
+        if (value) {
+          fetchChapters(value);
+        } else {
+          setChapters([]);
+        }
       }
       
       // Note: Topic clearing and order number calculation is handled by useEffect
@@ -343,7 +365,44 @@ const TopicManagement = () => {
 
   const handleEditFormChange = (e) => {
     const { name, value } = e.target;
-    setEditFormData((prev) => ({ ...prev, [name]: value }));
+    setEditFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset subject when exam changes
+      if (name === "examId" && value !== prev.examId) {
+        newData.subjectId = "";
+        newData.unitId = "";
+        newData.chapterId = "";
+        setUnits([]); // Clear units when exam changes
+        setChapters([]); // Clear chapters when exam changes
+      }
+      
+      // Reset unit when subject changes and fetch units for the selected exam and subject
+      if (name === "subjectId" && value !== prev.subjectId) {
+        newData.unitId = "";
+        newData.chapterId = "";
+        setChapters([]); // Clear chapters when subject changes
+        // Fetch units for the selected exam and subject in edit form
+        if (newData.examId && value) {
+          fetchUnits(newData.examId, value);
+        } else {
+          setUnits([]);
+        }
+      }
+      
+      // Reset chapter when unit changes and fetch chapters for the selected unit
+      if (name === "unitId" && value !== prev.unitId) {
+        newData.chapterId = "";
+        // Fetch chapters for the selected unit in edit form
+        if (value) {
+          fetchChapters(value);
+        } else {
+          setChapters([]);
+        }
+      }
+      
+      return newData;
+    });
     setFormError(null);
   };
 
@@ -359,6 +418,8 @@ const TopicManagement = () => {
     });
     setAdditionalTopics([{ name: "", orderNumber: "" }]);
     setFormError(null);
+    setUnits([]); // Clear units when form is cancelled
+    setChapters([]); // Clear chapters when form is cancelled
   };
 
   const handleCancelEditForm = () => {
@@ -373,6 +434,8 @@ const TopicManagement = () => {
       orderNumber: "",
     });
     setFormError(null);
+    setUnits([]); // Clear units when edit form is cancelled
+    setChapters([]); // Clear chapters when edit form is cancelled
   };
 
   const handleOpenAddForm = () => {
@@ -387,6 +450,8 @@ const TopicManagement = () => {
     });
     setAdditionalTopics([{ name: "", orderNumber: "" }]);
     setFormError(null);
+    setUnits([]); // Clear units when opening new form
+    setChapters([]); // Clear chapters when opening new form
   };
 
   const handleAddMoreTopics = () => {
@@ -519,15 +584,30 @@ const TopicManagement = () => {
       return;
     }
 
+    const examId = topicToEdit.examId?._id || topicToEdit.examId;
+    const subjectId = topicToEdit.subjectId?._id || topicToEdit.subjectId;
+    const unitId = topicToEdit.unitId?._id || topicToEdit.unitId;
+    const chapterId = topicToEdit.chapterId?._id || topicToEdit.chapterId;
+
     setEditingTopic(topicToEdit);
     setEditFormData({
       name: topicToEdit.name,
-      examId: topicToEdit.examId._id || topicToEdit.examId,
-      subjectId: topicToEdit.subjectId._id || topicToEdit.subjectId,
-      unitId: topicToEdit.unitId._id || topicToEdit.unitId,
-      chapterId: topicToEdit.chapterId._id || topicToEdit.chapterId,
+      examId: examId,
+      subjectId: subjectId,
+      unitId: unitId,
+      chapterId: chapterId,
       orderNumber: topicToEdit.orderNumber?.toString() || "",
     });
+    
+    // Fetch units and chapters for the selected exam, subject, and unit when editing
+    if (examId && subjectId) {
+      fetchUnits(examId, subjectId).then(() => {
+        if (unitId) {
+          fetchChapters(unitId);
+        }
+      });
+    }
+    
     setShowEditForm(true);
   };
 
@@ -749,7 +829,6 @@ const TopicManagement = () => {
           error.response?.data?.message || error.message
         }`
       );
-      setTimeout(() => setError(null), 5000); // Clear error after 5 seconds
     }
   };
 

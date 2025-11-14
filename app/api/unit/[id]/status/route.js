@@ -6,6 +6,7 @@ import Chapter from "@/models/Chapter";
 import Topic from "@/models/Topic";
 import SubTopic from "@/models/SubTopic";
 import mongoose from "mongoose";
+import { logger } from "@/utils/logger";
 
 // ---------- PATCH UNIT STATUS (with Cascading) ----------
 export async function PATCH(request, { params }) {
@@ -43,7 +44,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Cascading: Update all children status
-    console.log(`🔄 Cascading status update to ${status} for unit ${id}`);
+    logger.info(`Cascading status update to ${status} for unit ${id}`);
 
     // Find all chapters in this unit
     const chapters = await Chapter.find({ unitId: id });
@@ -61,7 +62,7 @@ export async function PATCH(request, { params }) {
         { $set: { status } }
       );
     }
-    console.log(`✅ Updated ${subTopicsResult.modifiedCount} SubTopics`);
+    logger.info(`Updated ${subTopicsResult.modifiedCount} SubTopics`);
 
     // Update all topics in these chapters
     let topicsResult = { modifiedCount: 0 };
@@ -71,14 +72,14 @@ export async function PATCH(request, { params }) {
         { $set: { status } }
       );
     }
-    console.log(`✅ Updated ${topicsResult.modifiedCount} Topics`);
+    logger.info(`Updated ${topicsResult.modifiedCount} Topics`);
 
     // Update all chapters in this unit
     const chaptersResult = await Chapter.updateMany(
       { unitId: id },
       { $set: { status } }
     );
-    console.log(`✅ Updated ${chaptersResult.modifiedCount} Chapters`);
+    logger.info(`Updated ${chaptersResult.modifiedCount} Chapters`);
 
     return NextResponse.json({
       success: true,
@@ -88,7 +89,7 @@ export async function PATCH(request, { params }) {
       data: updated,
     });
   } catch (error) {
-    console.error("Error updating unit status:", error);
+    logger.error("Error updating unit status:", error);
     return NextResponse.json(
       { success: false, message: "Failed to update unit status" },
       { status: 500 }
