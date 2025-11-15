@@ -231,17 +231,8 @@ const ChaptersManagement = () => {
     return units || [];
   }, [units]);
 
-  // Fetch units for filter section when filterSubject changes
-  useEffect(() => {
-    if (filterSubject && filterExam) {
-      fetchUnitsForFilter(filterExam, filterSubject);
-    } else {
-      setFilterUnits([]);
-    }
-  }, [filterSubject, filterExam]);
-
   // Fetch units for filter section
-  const fetchUnitsForFilter = async (examId, subjectId) => {
+  const fetchUnitsForFilter = useCallback(async (examId, subjectId) => {
     if (!examId || !subjectId) {
       setFilterUnits([]);
       return;
@@ -260,7 +251,16 @@ const ChaptersManagement = () => {
       console.error("Error fetching filter units:", error);
       setFilterUnits([]);
     }
-  };
+  }, []);
+
+  // Fetch units for filter section when filterSubject changes
+  useEffect(() => {
+    if (filterSubject && filterExam) {
+      fetchUnitsForFilter(filterExam, filterSubject);
+    } else {
+      setFilterUnits([]);
+    }
+  }, [filterSubject, filterExam, fetchUnitsForFilter]);
 
   // Filter units based on selected subject for filters
   const filteredFilterUnits = useMemo(() => {
@@ -1655,7 +1655,7 @@ const ChaptersManagement = () => {
                   {filterUnit && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Unit:{" "}
-                      {units.find((u) => u._id === filterUnit)?.name || "N/A"}
+                      {filterUnits.find((u) => u._id === filterUnit)?.name || "N/A"}
                       <button
                         onClick={() => setFilterUnit("")}
                         className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"

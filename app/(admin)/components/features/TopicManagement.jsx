@@ -26,6 +26,7 @@ const TopicManagement = () => {
   const [units, setUnits] = useState([]);
   const [filterUnits, setFilterUnits] = useState([]); // Separate units for filter section
   const [chapters, setChapters] = useState([]);
+  const [filterChapters, setFilterChapters] = useState([]); // Separate chapters for filter section
   const [formData, setFormData] = useState({
     name: "",
     examId: "",
@@ -246,17 +247,8 @@ const TopicManagement = () => {
     );
   }, [subjects, filterExam]);
 
-  // Fetch units for filter section when filterSubject changes
-  useEffect(() => {
-    if (filterSubject && filterExam) {
-      fetchUnitsForFilter(filterExam, filterSubject);
-    } else {
-      setFilterUnits([]);
-    }
-  }, [filterSubject, filterExam]);
-
   // Fetch units for filter section
-  const fetchUnitsForFilter = async (examId, subjectId) => {
+  const fetchUnitsForFilter = useCallback(async (examId, subjectId) => {
     if (!examId || !subjectId) {
       setFilterUnits([]);
       return;
@@ -275,7 +267,16 @@ const TopicManagement = () => {
       console.error("Error fetching filter units:", error);
       setFilterUnits([]);
     }
-  };
+  }, []);
+
+  // Fetch units for filter section when filterSubject changes
+  useEffect(() => {
+    if (filterSubject && filterExam) {
+      fetchUnitsForFilter(filterExam, filterSubject);
+    } else {
+      setFilterUnits([]);
+    }
+  }, [filterSubject, filterExam, fetchUnitsForFilter]);
 
   // Filter units based on selected subject for filters
   const filteredFilterUnits = useMemo(() => {
@@ -287,20 +288,52 @@ const TopicManagement = () => {
     );
   }, [filterUnits, filterSubject]);
 
+  // Fetch chapters for filter section
+  const fetchChaptersForFilter = useCallback(async (unitId) => {
+    if (!unitId) {
+      setFilterChapters([]);
+      return;
+    }
+    try {
+      const response = await api.get(
+        `/chapter?unitId=${unitId}&status=all&limit=1000`
+      );
+      if (response.data.success) {
+        const chaptersData = response.data.data || [];
+        // Sort by orderNumber in ascending order
+        const sorted = chaptersData.sort((a, b) => {
+          const ao = a.orderNumber || 0;
+          const bo = b.orderNumber || 0;
+          return ao - bo;
+        });
+        setFilterChapters(sorted);
+      } else {
+        console.error("Failed to fetch filter chapters:", response.data.message);
+        setFilterChapters([]);
+      }
+    } catch (error) {
+      console.error("Error fetching filter chapters:", error);
+      setFilterChapters([]);
+    }
+  }, []);
+
+  // Fetch chapters for filter section when filterUnit changes
+  useEffect(() => {
+    if (filterUnit) {
+      fetchChaptersForFilter(filterUnit);
+    } else {
+      setFilterChapters([]);
+    }
+  }, [filterUnit, fetchChaptersForFilter]);
+
   // Filter chapters based on selected unit for filters
   const filteredFilterChapters = useMemo(() => {
     if (!filterUnit) return [];
-    const filtered = chapters.filter(
+    return filterChapters.filter(
       (chapter) =>
         chapter.unitId?._id === filterUnit || chapter.unitId === filterUnit
     );
-    // Sort by orderNumber in ascending order
-    return filtered.sort((a, b) => {
-      const ao = a.orderNumber || 0;
-      const bo = b.orderNumber || 0;
-      return ao - bo;
-    });
-  }, [chapters, filterUnit]);
+  }, [filterChapters, filterUnit]);
 
   // Filter topics based on filters
   const filteredTopics = useMemo(() => {
@@ -1488,7 +1521,7 @@ const TopicManagement = () => {
                   {filterUnit && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Unit:{" "}
-                      {units.find((u) => u._id === filterUnit)?.name || "N/A"}
+                      {filterUnits.find((u) => u._id === filterUnit)?.name || "N/A"}
                       <button
                         onClick={() => {
                           setFilterUnit("");
@@ -1503,7 +1536,7 @@ const TopicManagement = () => {
                   {filterChapter && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Chapter:{" "}
-                      {chapters.find((c) => c._id === filterChapter)?.name ||
+                      {filterChapters.find((c) => c._id === filterChapter)?.name ||
                         "N/A"}
                       <button
                         onClick={() => setFilterChapter("")}

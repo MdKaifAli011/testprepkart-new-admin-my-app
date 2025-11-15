@@ -24,7 +24,9 @@ const SubTopicsManagement = () => {
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [units, setUnits] = useState([]);
+  const [filterUnits, setFilterUnits] = useState([]); // Separate units for filter section
   const [chapters, setChapters] = useState([]);
+  const [filterChapters, setFilterChapters] = useState([]); // Separate chapters for filter section
   const [topics, setTopics] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -295,30 +297,93 @@ const SubTopicsManagement = () => {
     );
   }, [subjects, filterExam]);
 
+  // Fetch units for filter section
+  const fetchUnitsForFilter = useCallback(async (examId, subjectId) => {
+    if (!examId || !subjectId) {
+      setFilterUnits([]);
+      return;
+    }
+    try {
+      const response = await api.get(
+        `/unit?examId=${examId}&subjectId=${subjectId}&status=all&limit=1000`
+      );
+      if (response.data.success) {
+        setFilterUnits(response.data.data || []);
+      } else {
+        console.error("Failed to fetch filter units:", response.data.message);
+        setFilterUnits([]);
+      }
+    } catch (error) {
+      console.error("Error fetching filter units:", error);
+      setFilterUnits([]);
+    }
+  }, []);
+
+  // Fetch units for filter section when filterSubject changes
+  useEffect(() => {
+    if (filterSubject && filterExam) {
+      fetchUnitsForFilter(filterExam, filterSubject);
+    } else {
+      setFilterUnits([]);
+    }
+  }, [filterSubject, filterExam, fetchUnitsForFilter]);
+
   // Filter units based on selected subject for filters
   const filteredFilterUnits = useMemo(() => {
     if (!filterSubject) return [];
-    return units.filter(
+    return filterUnits.filter(
       (unit) =>
         unit.subjectId?._id === filterSubject ||
         unit.subjectId === filterSubject
     );
-  }, [units, filterSubject]);
+  }, [filterUnits, filterSubject]);
+
+  // Fetch chapters for filter section
+  const fetchChaptersForFilter = useCallback(async (unitId) => {
+    if (!unitId) {
+      setFilterChapters([]);
+      return;
+    }
+    try {
+      const response = await api.get(
+        `/chapter?unitId=${unitId}&status=all&limit=1000`
+      );
+      if (response.data.success) {
+        const chaptersData = response.data.data || [];
+        // Sort by orderNumber in ascending order
+        const sorted = chaptersData.sort((a, b) => {
+          const ao = a.orderNumber || 0;
+          const bo = b.orderNumber || 0;
+          return ao - bo;
+        });
+        setFilterChapters(sorted);
+      } else {
+        console.error("Failed to fetch filter chapters:", response.data.message);
+        setFilterChapters([]);
+      }
+    } catch (error) {
+      console.error("Error fetching filter chapters:", error);
+      setFilterChapters([]);
+    }
+  }, []);
+
+  // Fetch chapters for filter section when filterUnit changes
+  useEffect(() => {
+    if (filterUnit) {
+      fetchChaptersForFilter(filterUnit);
+    } else {
+      setFilterChapters([]);
+    }
+  }, [filterUnit, fetchChaptersForFilter]);
 
   // Filter chapters based on selected unit for filters
   const filteredFilterChapters = useMemo(() => {
     if (!filterUnit) return [];
-    const filtered = chapters.filter(
+    return filterChapters.filter(
       (chapter) =>
         chapter.unitId?._id === filterUnit || chapter.unitId === filterUnit
     );
-    // Sort by orderNumber in ascending order
-    return filtered.sort((a, b) => {
-      const ao = a.orderNumber || 0;
-      const bo = b.orderNumber || 0;
-      return ao - bo;
-    });
-  }, [chapters, filterUnit]);
+  }, [filterChapters, filterUnit]);
 
   // Filter topics based on selected chapter for filters
   const filteredFilterTopics = useMemo(() => {
@@ -1665,7 +1730,7 @@ const SubTopicsManagement = () => {
                   {filterUnit && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                       Unit:{" "}
-                      {units.find((u) => u._id === filterUnit)?.name || "N/A"}
+                      {filterUnits.find((u) => u._id === filterUnit)?.name || "N/A"}
                       <button
                         onClick={() => {
                           setFilterUnit("");
@@ -1681,7 +1746,7 @@ const SubTopicsManagement = () => {
                   {filterChapter && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
                       Chapter:{" "}
-                      {chapters.find((c) => c._id === filterChapter)?.name ||
+                      {filterChapters.find((c) => c._id === filterChapter)?.name ||
                         "N/A"}
                       <button
                         onClick={() => {
