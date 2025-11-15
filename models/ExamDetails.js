@@ -6,7 +6,7 @@ const examDetailsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Exam",
       required: true,
-      unique: true, // One details record per exam
+      // Unique constraint enforced via schema.index() below
     },
     content: {
       type: String,

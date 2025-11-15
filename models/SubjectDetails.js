@@ -6,7 +6,7 @@ const subjectDetailsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Subject",
       required: true,
-      unique: true, // One details record per subject
+      // Unique constraint enforced via schema.index() below
     },
     content: {
       type: String,
@@ -47,4 +47,3 @@ const SubjectDetails =
   mongoose.model("SubjectDetails", subjectDetailsSchema);
 
 export default SubjectDetails;
-

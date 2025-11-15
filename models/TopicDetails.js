@@ -6,7 +6,7 @@ const topicDetailsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Topic",
       required: true,
-      unique: true, // One details record per topic
+      // Unique constraint enforced via schema.index() below
     },
     content: {
       type: String,

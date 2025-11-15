@@ -6,7 +6,7 @@ const chapterDetailsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chapter",
       required: true,
-      unique: true, // One details record per chapter
+      // Unique constraint enforced via schema.index() below
     },
     content: {
       type: String,

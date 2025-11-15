@@ -304,9 +304,9 @@ const HomePage = () => {
                 {error}
               </div>
             </div>
-          ) : memoizedExams.length > 0 ? (
+          ) : exams.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 xl:gap-8">
-              {memoizedExams.map((exam) => (
+              {exams.map((exam) => (
                 <Suspense
                   key={exam._id}
                   fallback={

@@ -6,7 +6,7 @@ const unitDetailsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Unit",
       required: true,
-      unique: true, // One details record per unit
+      // Unique constraint enforced via schema.index() below
     },
     content: {
       type: String,

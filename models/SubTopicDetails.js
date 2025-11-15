@@ -6,7 +6,7 @@ const subTopicDetailsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "SubTopic",
       required: true,
-      unique: true, // One details record per subtopic
+      // Unique constraint enforced via schema.index() below
     },
     content: {
       type: String,

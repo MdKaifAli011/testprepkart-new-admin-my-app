@@ -24,6 +24,7 @@ const TopicManagement = () => {
   const [exams, setExams] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [units, setUnits] = useState([]);
+  const [filterUnits, setFilterUnits] = useState([]); // Separate units for filter section
   const [chapters, setChapters] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -245,15 +246,46 @@ const TopicManagement = () => {
     );
   }, [subjects, filterExam]);
 
+  // Fetch units for filter section when filterSubject changes
+  useEffect(() => {
+    if (filterSubject && filterExam) {
+      fetchUnitsForFilter(filterExam, filterSubject);
+    } else {
+      setFilterUnits([]);
+    }
+  }, [filterSubject, filterExam]);
+
+  // Fetch units for filter section
+  const fetchUnitsForFilter = async (examId, subjectId) => {
+    if (!examId || !subjectId) {
+      setFilterUnits([]);
+      return;
+    }
+    try {
+      const response = await api.get(
+        `/unit?examId=${examId}&subjectId=${subjectId}&status=all&limit=1000`
+      );
+      if (response.data.success) {
+        setFilterUnits(response.data.data || []);
+      } else {
+        console.error("Failed to fetch filter units:", response.data.message);
+        setFilterUnits([]);
+      }
+    } catch (error) {
+      console.error("Error fetching filter units:", error);
+      setFilterUnits([]);
+    }
+  };
+
   // Filter units based on selected subject for filters
   const filteredFilterUnits = useMemo(() => {
     if (!filterSubject) return [];
-    return units.filter(
+    return filterUnits.filter(
       (unit) =>
         unit.subjectId?._id === filterSubject ||
         unit.subjectId === filterSubject
     );
-  }, [units, filterSubject]);
+  }, [filterUnits, filterSubject]);
 
   // Filter chapters based on selected unit for filters
   const filteredFilterChapters = useMemo(() => {
